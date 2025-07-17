@@ -1,4 +1,4 @@
-import { indexByProperty } from './utils/indexBy.js'
+import { indexByProperty } from '../utils/indexBy.js'
 
 export interface ProcessDefinition {
   name: string

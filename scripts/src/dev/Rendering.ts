@@ -1,3 +1,4 @@
+import { type ThrottledFunction, throttle } from '../utils/throttle.js'
 import type { createStateManager, LogEntry } from './atoms.js'
 import type { DevRunnerConfig } from './DevRunnerConfig.js'
 
@@ -16,10 +17,14 @@ export class Rendering {
     bgWhite: '\x1b[47m',
   }
 
+  public throttledRender: ThrottledFunction<() => void>
+
   constructor(
     private stateManager: ReturnType<typeof createStateManager>,
     private config: DevRunnerConfig
-  ) {}
+  ) {
+    this.throttledRender = throttle(() => this.render(), 100)
+  }
 
   render(): void {
     console.clear()
@@ -118,5 +123,9 @@ export class Rendering {
 
   displayShutdown(): void {
     console.log(`\n${this.colors.yellow}Shutting down all processes...${this.colors.reset}`)
+  }
+
+  cleanup(): void {
+    this.throttledRender.cancel()
   }
 }

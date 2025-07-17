@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
-import { createDevCommand } from './src/createDevCommand.js'
-import type { ProcessDefinition } from './src/DevRunner.js'
+import { createDevCommand } from './src/dev/createDevCommand.js'
+import type { ProcessDefinition } from './src/dev/DevRunnerConfig.js'
 
 // Define the process configurations with tags
 const processConfigs: ProcessDefinition[] = [

@@ -35,12 +35,12 @@ export class DevRunner {
     const runningProcesses = this.config.getFilteredProcessNames()
     console.log(`Starting: ${runningProcesses.join(', ')}`)
 
-    // Set up reactive rendering - automatically re-render when state changes
-    this.unsubscribeObserver = this.stateManager.observeChanges(() => {
-      this.rendering.render()
-    })
+    // Set up reactive rendering - automatically re-render when state changes using throttled render
+    this.unsubscribeObserver = this.stateManager.observeChanges(() =>
+      this.rendering.throttledRender()
+    )
 
-    // Initial render
+    // Initial render (not throttled for immediate feedback)
     this.rendering.render()
 
     // Setup keyboard controls
@@ -56,6 +56,7 @@ export class DevRunner {
   private setupCleanupHandlers(): void {
     const cleanup = () => {
       this.keyboardInteractions.cleanup()
+      this.rendering.cleanup()
       // Clean up observer
       if (this.unsubscribeObserver) {
         this.unsubscribeObserver()
