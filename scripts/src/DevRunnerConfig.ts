@@ -1,11 +1,4 @@
 import { indexByProperty } from '../utils/indexBy.js'
-
-export interface LogEntry {
-  timestamp: Date
-  content: string
-  processName: string
-}
-
 export interface ProcessDefinition {
   name: string
   package: string

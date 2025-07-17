@@ -1,50 +1,47 @@
-import { getDefaultStore } from 'jotai'
-import { createDevRunnerAtoms } from '../state/atoms.js'
-import { DevRunnerConfig, type DevRunnerConfigOptions, type LogEntry } from './DevRunnerConfig.js'
+import { createDevRunnerAtoms, createStateManager } from './atoms.js'
+import { DevRunnerConfig, type DevRunnerConfigOptions } from './DevRunnerConfig.js'
 import { KeyboardInteractions } from './KeyboardInteractions.js'
 import { ProcessManager } from './ProcessManager.js'
 import { Rendering } from './Rendering.js'
 
 export class DevRunner {
-  private store = getDefaultStore()
   private config: DevRunnerConfig
   private atoms: ReturnType<typeof createDevRunnerAtoms>
+  private stateManager: ReturnType<typeof createStateManager>
   private rendering: Rendering
   private keyboardInteractions: KeyboardInteractions
   private processManager: ProcessManager
+  private unsubscribeObserver?: () => void
 
   constructor(configOptions: DevRunnerConfigOptions) {
-    // Create config manager for business logic
+    // Create config for business logic
     this.config = new DevRunnerConfig(configOptions)
 
-    // Create atoms without config dependency
+    // Create atoms and state manager
     this.atoms = createDevRunnerAtoms()
+    this.stateManager = createStateManager(this.atoms)
 
-    // Initialize component classes with atoms and config
-    this.rendering = new Rendering(this.atoms, this.config)
-    this.keyboardInteractions = new KeyboardInteractions(this.atoms, this.config, this.rendering)
-    this.processManager = new ProcessManager(this.atoms, this.config, this.rendering)
+    // Initialize component classes with state manager and config
+    this.rendering = new Rendering(this.stateManager, this.config)
+    this.keyboardInteractions = new KeyboardInteractions(this.stateManager, this.config)
+    this.processManager = new ProcessManager(this.stateManager, this.config)
 
     // Initialize log buffers for the filtered processes
     const runningProcesses = this.config.getFilteredProcessNames()
-    this.initializeLogBuffers(runningProcesses)
-  }
-
-  private initializeLogBuffers(processNames: string[]): void {
-    const logBuffers = new Map<string, LogEntry[]>()
-
-    processNames.forEach((name) => {
-      logBuffers.set(name, [])
-    })
-    logBuffers.set('summary', [])
-
-    this.store.set(this.atoms.logBuffersAtom, logBuffers)
-    this.store.set(this.atoms.serversAtom, new Map())
+    this.stateManager.initializeLogBuffers(runningProcesses)
   }
 
   async start(): Promise<void> {
     const runningProcesses = this.config.getFilteredProcessNames()
     console.log(`Starting: ${runningProcesses.join(', ')}`)
+
+    // Set up reactive rendering - automatically re-render when state changes
+    this.unsubscribeObserver = this.stateManager.observeChanges(() => {
+      this.rendering.render()
+    })
+
+    // Initial render
+    this.rendering.render()
 
     // Setup keyboard controls
     this.keyboardInteractions.setupKeyboardControls()
@@ -59,6 +56,10 @@ export class DevRunner {
   private setupCleanupHandlers(): void {
     const cleanup = () => {
       this.keyboardInteractions.cleanup()
+      // Clean up observer
+      if (this.unsubscribeObserver) {
+        this.unsubscribeObserver()
+      }
     }
 
     process.on('SIGINT', cleanup)
@@ -68,4 +69,4 @@ export class DevRunner {
 }
 
 // Re-export types for convenience
-export type { DevRunnerConfigOptions, LogEntry, ProcessDefinition } from './DevRunnerConfig.js'
+export type { DevRunnerConfigOptions, ProcessDefinition } from './DevRunnerConfig.js'

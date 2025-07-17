@@ -1,9 +1,7 @@
-import { getDefaultStore } from 'jotai'
-import type { createDevRunnerAtoms } from '../state/atoms.js'
-import type { DevRunnerConfig, LogEntry } from './DevRunnerConfig.js'
+import type { createStateManager, LogEntry } from './atoms.js'
+import type { DevRunnerConfig } from './DevRunnerConfig.js'
 
 export class Rendering {
-  private store = getDefaultStore()
   private colors = {
     reset: '\x1b[0m',
     bright: '\x1b[1m',
@@ -19,7 +17,7 @@ export class Rendering {
   }
 
   constructor(
-    private atoms: ReturnType<typeof createDevRunnerAtoms>,
+    private stateManager: ReturnType<typeof createStateManager>,
     private config: DevRunnerConfig
   ) {}
 
@@ -27,7 +25,7 @@ export class Rendering {
     console.clear()
     this.displayHeader()
 
-    const activeView = this.store.get(this.atoms.activeViewAtom)
+    const activeView = this.stateManager.getActiveView()
     if (activeView === 'summary') {
       this.displaySummary()
     } else {
@@ -50,7 +48,7 @@ export class Rendering {
     console.log('============================================================')
 
     // Show server URLs first
-    const urlEntries = this.store.get(this.atoms.serverUrlsAtom)
+    const urlEntries = this.stateManager.getServerUrls()
 
     if (urlEntries.length > 0) {
       console.log('🚀 Running Servers:')
@@ -63,7 +61,7 @@ export class Rendering {
     }
 
     console.log('Recent Activity:')
-    const currentLogs = this.store.get(this.atoms.currentLogsAtom)
+    const currentLogs = this.stateManager.getCurrentLogs()
 
     currentLogs.forEach((entry: LogEntry) => {
       const timeStr = entry.timestamp.toLocaleTimeString()
@@ -85,12 +83,9 @@ export class Rendering {
     console.log(`${color}${this.colors.bright}${processDefinition.description}${this.colors.reset}`)
     console.log('============================================================')
 
-    const logBuffers = this.store.get(this.atoms.logBuffersAtom)
-    const buffer = logBuffers.get(processName) || []
-    const showAll = this.store.get(this.atoms.showAllLogsAtom)
-    const logsToShow = showAll ? buffer : buffer.slice(-100)
+    const currentLogs = this.stateManager.getCurrentLogs()
 
-    logsToShow.forEach((entry: LogEntry) => {
+    currentLogs.forEach((entry: LogEntry) => {
       const timeStr = entry.timestamp.toLocaleTimeString()
       console.log(`${this.colors.gray}[${timeStr}]${this.colors.reset} ${entry.content}`)
     })

@@ -203,6 +203,9 @@ importers:
       jotai:
         specifier: ^2.10.4
         version: 2.12.5(@types/react@19.1.8)(react@19.1.0)
+      jotai-effect:
+        specifier: ^2.0.5
+        version: 2.0.5(jotai@2.12.5(@types/react@19.1.8)(react@19.1.0))
     devDependencies:
       '@types/node':
         specifier: ^22.16.4
@@ -1364,6 +1367,12 @@ packages:
   jiti@1.21.7:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
     hasBin: true
+
+  jotai-effect@2.0.5:
+    resolution: {integrity: sha512-SUCStiMDWMQIV5Wh95Dq0qvl3tsI1vKDSRHFBQg2bHS5BCIyDB6ykFpIFYhX+d2yYk3dJjOgNKZaTJEUmFFcdA==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      jotai: '>=2.12.1'
 
   jotai@2.12.5:
     resolution: {integrity: sha512-G8m32HW3lSmcz/4mbqx0hgJIQ0ekndKWiYP7kWVKi0p6saLXdSoye+FZiOFyonnd7Q482LCzm8sMDl7Ar1NWDw==}
@@ -3191,6 +3200,10 @@ snapshots:
       '@pkgjs/parseargs': 0.11.0
 
   jiti@1.21.7: {}
+
+  jotai-effect@2.0.5(jotai@2.12.5(@types/react@19.1.8)(react@19.1.0)):
+    dependencies:
+      jotai: 2.12.5(@types/react@19.1.8)(react@19.1.0)
 
   jotai@2.12.5(@types/react@19.1.8)(react@19.1.0):
     optionalDependencies:

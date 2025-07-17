@@ -5,9 +5,10 @@
   "type": "module",
   "description": "Development scripts and tooling for Jotai Iframe Bridge",
   "dependencies": {
-    "jotai": "^2.10.4",
     "commander": "^14.0.0",
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "jotai": "^2.10.4",
+    "jotai-effect": "^2.0.5"
   },
   "devDependencies": {
     "@types/node": "^22.16.4",

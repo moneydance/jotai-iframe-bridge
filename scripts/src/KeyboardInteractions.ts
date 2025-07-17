@@ -1,15 +1,10 @@
-import { getDefaultStore } from 'jotai'
-import type { createDevRunnerAtoms } from '../state/atoms.js'
+import type { createStateManager } from './atoms.js'
 import type { DevRunnerConfig } from './DevRunnerConfig.js'
-import type { Rendering } from './Rendering.js'
 
 export class KeyboardInteractions {
-  private store = getDefaultStore()
-
   constructor(
-    private atoms: ReturnType<typeof createDevRunnerAtoms>,
-    private config: DevRunnerConfig,
-    private rendering: Rendering
+    private stateManager: ReturnType<typeof createStateManager>,
+    private config: DevRunnerConfig
   ) {}
 
   setupKeyboardControls(): void {
@@ -25,14 +20,15 @@ export class KeyboardInteractions {
       }
 
       if (key === 'r' || key === 'R') {
-        this.rendering.render()
+        // Force refresh by touching an atom to trigger re-render
+        const currentView = this.stateManager.getActiveView()
+        this.stateManager.setActiveView(currentView)
         return
       }
 
       if (key === 'a' || key === 'A') {
-        const currentShowAll = this.store.get(this.atoms.showAllLogsAtom)
-        this.store.set(this.atoms.showAllLogsAtom, !currentShowAll)
-        this.rendering.render()
+        this.stateManager.toggleShowAllLogs()
+        // Re-render happens automatically via observer
         return
       }
 
@@ -42,8 +38,8 @@ export class KeyboardInteractions {
 
         if (this.isValidViewNumber(num, runningProcesses)) {
           const newView = this.getViewFromNumber(num, runningProcesses)
-          this.store.set(this.atoms.activeViewAtom, newView)
-          this.rendering.render()
+          this.stateManager.setActiveView(newView)
+          // Re-render happens automatically via observer
         }
       }
     })

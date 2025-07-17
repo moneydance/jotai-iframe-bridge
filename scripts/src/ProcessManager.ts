@@ -1,27 +1,23 @@
 import concurrently from 'concurrently'
-import { getDefaultStore } from 'jotai'
-import type { createDevRunnerAtoms } from '../state/atoms.js'
+import type { createStateManager } from './atoms.js'
 import type { DevRunnerConfig } from './DevRunnerConfig.js'
 import { LogProcessor } from './LogProcessor.js'
-import type { Rendering } from './Rendering.js'
 
 export class ProcessManager {
-  private store = getDefaultStore()
   private logProcessor: LogProcessor
 
   constructor(
-    private atoms: ReturnType<typeof createDevRunnerAtoms>,
-    private config: DevRunnerConfig,
-    private rendering: Rendering
+    stateManager: ReturnType<typeof createStateManager>,
+    private config: DevRunnerConfig
   ) {
-    this.logProcessor = new LogProcessor(atoms)
+    this.logProcessor = new LogProcessor(stateManager)
   }
 
   async start(): Promise<void> {
     const runningProcesses = this.config.getFilteredProcessNames()
 
     if (runningProcesses.length === 0) {
-      this.rendering.displayError('No processes to run with current filters')
+      console.error('No processes to run with current filters')
       return
     }
 
@@ -38,9 +34,6 @@ export class ProcessManager {
       }
     })
 
-    // Initial render
-    this.rendering.render()
-
     // Start concurrent processes
     const { commands: runningCommands, result } = concurrently(commands, {
       prefix: 'name',
@@ -49,22 +42,26 @@ export class ProcessManager {
     })
 
     // Set up data handlers for each command
-    runningCommands.forEach((command: any) => {
+    runningCommands.forEach((command) => {
       const processName = command.name
 
-      command.stdout.subscribe((data: any) => {
+      command.stdout.subscribe((data) => {
         this.handleProcessOutput(processName, data.toString())
       })
 
-      command.stderr.subscribe((data: any) => {
+      command.stderr.subscribe((data) => {
         this.handleProcessOutput(processName, data.toString())
       })
 
-      command.error.subscribe((error: any) => {
-        this.handleProcessOutput(processName, `Error: ${error.message}`)
+      command.error.subscribe((error) => {
+        if (error instanceof Error) {
+          this.handleProcessOutput(processName, `Error: ${error.message}`)
+        } else {
+          this.handleProcessOutput(processName, `Error: ${error}`)
+        }
       })
 
-      command.close.subscribe((exitInfo: any) => {
+      command.close.subscribe((exitInfo) => {
         if (exitInfo.exitCode !== 0) {
           this.handleProcessOutput(processName, `Process exited with code: ${exitInfo.exitCode}`)
         }
@@ -81,9 +78,7 @@ export class ProcessManager {
 
   private handleProcessOutput(processName: string, data: string): void {
     // Delegate all log processing to LogProcessor
+    // Re-render happens automatically via observer when state changes
     this.logProcessor.processOutput(processName, data)
-
-    // Re-render to show new logs
-    this.rendering.render()
   }
 }
