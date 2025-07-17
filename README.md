@@ -5,6 +5,10 @@ A monorepo workspace containing React TypeScript component libraries for Jotai i
 ## Packages
 
 - `jotai-iframe-bridge` - A React TypeScript component library with a simple Hello World component
+  - ✅ TypeScript with React components
+  - ✅ Biome formatting and linting
+  - ✅ tsup build system with proper conditional exports
+  - 🚧 Vitest browser mode testing (ESM compatibility in progress)
 
 ## Structure
 
@@ -64,6 +68,15 @@ pnpm dev
 
 # Type check all packages
 pnpm type-check
+
+# Test all packages
+pnpm test
+
+# Run tests once (CI mode)
+pnpm test:run
+
+# Watch tests
+pnpm test:watch
 
 # Format code
 pnpm format

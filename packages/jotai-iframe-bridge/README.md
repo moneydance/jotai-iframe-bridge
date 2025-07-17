@@ -70,6 +70,18 @@ pnpm dev
 # Type check
 pnpm type-check
 
+# Run tests
+pnpm test
+
+# Run tests once (CI mode)
+pnpm test:run
+
+# Run tests with UI
+pnpm test:ui
+
+# Watch tests
+pnpm test:watch
+
 # Format code
 pnpm format
 
@@ -88,3 +100,34 @@ pnpm check
 # Run both format and lint with fixes
 pnpm check:fix
 ```
+
+## Testing
+
+This package uses [Vitest](https://vitest.dev/guide/browser/) with browser mode for testing React components. The tests run in a real browser environment using Playwright.
+
+### Test Files
+
+- Tests are located alongside source files with `.test.tsx` or `.spec.tsx` extensions
+- Example: `src/HelloWorld.test.tsx`
+
+### Testing Libraries
+
+- **Vitest**: Fast test runner with browser mode support
+- **@testing-library/react**: React component testing utilities
+- **@testing-library/jest-dom**: Extended DOM matchers
+- **Playwright**: Browser automation for running tests
+
+### Running Tests
+
+```bash
+# Run tests in watch mode (recommended for development)
+pnpm test
+
+# Run tests once and exit
+pnpm test:run
+
+# Run tests with UI interface
+pnpm test:ui
+```
+
+> **Note**: The Vitest browser mode configuration is currently experiencing ESM/CommonJS compatibility issues. The testing infrastructure is set up at the package level with all necessary dependencies installed. To complete the setup, you may need to adjust the module configuration or use a simpler Vitest setup initially.
