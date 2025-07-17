@@ -31,6 +31,12 @@ export class ProcessManager {
         command: this.config.buildCommand(processDefinition),
         name: processName,
         prefixColor: processDefinition.color,
+        env: {
+          // Force color output from child processes
+          FORCE_COLOR: '1',
+          CI: 'false',
+          NO_COLOR: undefined,
+        },
       }
     })
 
@@ -39,6 +45,9 @@ export class ProcessManager {
       prefix: 'name',
       killOthers: ['failure', 'success'],
       restartTries: 0,
+      // Additional options to preserve colors
+      raw: false, // Keep false to get structured output
+      timestampFormat: 'HH:mm:ss.SSS',
     })
 
     // Set up data handlers for each command

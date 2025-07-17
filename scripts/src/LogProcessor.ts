@@ -65,11 +65,24 @@ export class LogProcessor {
   }
 
   private cleanOutput(data: string): string {
-    const ansiEscapeRegex = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g')
-    return data
-      .replace(ansiEscapeRegex, '') // Remove ANSI escape codes
-      .replace(/\r\n/g, '\n') // Normalize line endings
-      .replace(/\r/g, '\n') // Handle remaining carriage returns
-      .trim()
+    // Remove problematic ANSI escape codes but preserve colors
+    const ESC = String.fromCharCode(27)
+    return (
+      data
+        // Remove cursor movement and positioning codes
+        .replace(new RegExp(`${ESC}\\[[0-9]+[ABCD]`, 'g'), '') // Cursor up/down/forward/back
+        .replace(new RegExp(`${ESC}\\[[0-9]+;[0-9]+[Hf]`, 'g'), '') // Cursor position
+        .replace(new RegExp(`${ESC}\\[[0-9]*[JK]`, 'g'), '') // Clear screen/line
+        .replace(new RegExp(`${ESC}\\[s`, 'g'), '') // Save cursor position
+        .replace(new RegExp(`${ESC}\\[u`, 'g'), '') // Restore cursor position
+        .replace(new RegExp(`${ESC}\\[2J`, 'g'), '') // Clear entire screen
+        .replace(new RegExp(`${ESC}\\[H`, 'g'), '') // Move cursor to home
+        // Remove carriage returns that interfere with line-by-line display
+        .replace(/\r(?!\n)/g, '') // Remove standalone carriage returns
+        .replace(/\r\n/g, '\n') // Normalize CRLF to LF
+        // Keep color codes: \x1b[<numbers>m (including semicolon-separated ones)
+        // This preserves foreground, background, and style codes
+        .trim()
+    )
   }
 }
