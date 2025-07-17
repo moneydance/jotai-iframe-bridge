@@ -1,20 +1,20 @@
 {
   "name": "jotai-iframe-bridge",
   "version": "0.1.0",
-  "description": "A bridge library for Jotai state management across iframes",
-  "main": "dist/index.js",
+  "description": "A bridge library for iframe communication using Jotai state management",
+  "main": "dist/index.cjs",
   "types": "dist/index.d.ts",
-  "module": "dist/index.mjs",
+  "module": "dist/index.js",
   "type": "module",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      },
-      "require": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
       },
       "default": "./dist/index.js"
     }
@@ -67,6 +67,5 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "packageManager": "pnpm@8.0.0"
+  }
 }

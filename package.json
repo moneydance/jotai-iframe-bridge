@@ -6,11 +6,16 @@
   "description": "Monorepo for Jotai iframe bridge packages",
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "pnpm -r dev",
+    "dev": "tsx scripts/dev-runner.ts",
+    "dev:servers": "tsx scripts/dev-runner.ts --include-tags dev",
+    "dev:tests": "tsx scripts/dev-runner.ts --include-tags test",
+    "dev:concurrent": "concurrently -n \"host,remote,lib\" -c \"cyan,magenta,yellow\" \"pnpm --filter host dev\" \"pnpm --filter remote dev\" \"pnpm --filter jotai-iframe-bridge dev\"",
     "type-check": "pnpm -r type-check",
     "test": "pnpm -r test",
     "test:run": "pnpm -r test:run",
     "test:watch": "pnpm -r test:watch",
+    "test:watch:concurrent": "concurrently -n \"host-test,lib-test\" -c \"cyan,yellow\" \"pnpm --filter host test:watch\" \"pnpm --filter jotai-iframe-bridge test:watch\"",
+    "dev:basic": "concurrently -n \"host,remote,lib,host-test,lib-test\" -c \"cyan,magenta,yellow,blue,green\" \"pnpm --filter host dev\" \"pnpm --filter remote dev\" \"pnpm --filter jotai-iframe-bridge dev\" \"pnpm --filter host test:watch\" \"pnpm --filter jotai-iframe-bridge test:watch\"",
     "lint": "biome lint .",
     "lint:fix": "biome lint --write .",
     "format": "biome format .",
@@ -34,11 +39,14 @@
     "@biomejs/biome": "^2.1.1",
     "@types/node": "^22.16.4",
     "@types/react": "^19.0.0",
+    "commander": "^14.0.0",
+    "concurrently": "^8.2.2",
     "react": "^19.0.0",
+    "tsx": "^4.20.3",
     "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
   },
-  "packageManager": "pnpm@8.0.0"
+  "packageManager": "pnpm@10.13.1"
 }

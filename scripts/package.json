@@ -1,0 +1,20 @@
+{
+  "name": "@jotai-iframe-bridge/dev-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Development scripts and tooling for Jotai Iframe Bridge",
+  "dependencies": {
+    "jotai": "^2.10.4",
+    "commander": "^14.0.0",
+    "concurrently": "^8.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.4",
+    "tsx": "^4.20.3",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
