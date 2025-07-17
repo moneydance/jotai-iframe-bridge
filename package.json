@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Monorepo for Jotai iframe bridge packages",
   "scripts": {
-    "build": "pnpm -r build",
+    "dev:script-runner": "pnpm exec tsx scripts/script-runner.ts",
     "dev": "pnpm exec tsx scripts/dev-runner.ts",
     "dev:servers": "pnpm exec tsx scripts/dev-runner.ts --include-tags dev",
     "dev:tests": "pnpm exec tsx scripts/dev-runner.ts --include-tags test",
+    "build": "pnpm -r build",
     "type-check": "pnpm -r type-check",
     "test": "pnpm -r test",
     "test:run": "pnpm -r test:run",
