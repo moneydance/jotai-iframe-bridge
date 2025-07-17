@@ -1,3 +1,4 @@
+import { OptionSelector } from '../OptionSelector.js'
 import { type ThrottledFunction, throttle } from '../utils/throttle.js'
 import type { createStateManager, LogEntry } from './atoms.js'
 import type { DevRunnerConfig } from './DevRunnerConfig.js'
@@ -98,22 +99,28 @@ export class Rendering {
 
   private displayControls(): void {
     const runningProcesses = this.config.getFilteredProcessNames()
+    const totalOptions = runningProcesses.length + 1 // +1 for summary
+    const selectionKeys = OptionSelector.getSelectionKeys(totalOptions)
+    const keyRange = OptionSelector.getSelectionKeyRange(selectionKeys)
 
     console.log('============================================================')
     console.log('Controls:')
-    console.log(' 1. Summary')
 
+    // Display numbered options with their selection keys
+    console.log(` ${selectionKeys[0]}. Summary`)
     runningProcesses.forEach((processName: string, index: number) => {
       const processDefinition = this.config.getProcessConfig(processName)
       if (processDefinition) {
         const color = this.colors[processDefinition.color as keyof typeof this.colors]
-        console.log(` ${index + 2}. ${color}${processDefinition.description}${this.colors.reset}`)
+        const selectionKey = selectionKeys[index + 1]
+        console.log(
+          ` ${selectionKey}. ${color}${processDefinition.description}${this.colors.reset}`
+        )
       }
     })
 
-    console.log(`Press 1-${runningProcesses.length + 1} to switch views`)
-    console.log("Press 'a' to show ALL logs in current view")
-    console.log("Press 'r' to refresh display")
+    console.log(`Press ${keyRange} to switch views`)
+    console.log('Press Ctrl+A to show ALL logs in current view')
     console.log('Press Ctrl+C to quit')
   }
 

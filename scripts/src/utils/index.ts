@@ -1,3 +1,4 @@
+export { OptionSelector } from '../OptionSelector.js'
 export { concurrent } from './concurrent.js'
 export { indexBy } from './indexBy.js'
 export type { SafeResult } from './safeAssignment.js'

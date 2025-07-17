@@ -2196,4 +2196,809 @@ Sent SIGINT to process group 51771
 Killing process group for PID: 51777
 Sent SIGINT to process group 51777
 [1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
-[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m⇡2 [30m!3 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[39C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[33m[0m[33m[40m[43m[30m 7s[0m[30m[43m[43m[30m[0m[30m[43m[43m[30m [0m[30m[43m[43m[30m[37m[0m[37m[43m[47m[30m 02:00:36 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[62D[?1h=[?2004h
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m⇡2 [30m!3 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[39C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[33m[0m[33m[40m[43m[30m 7s[0m[30m[43m[43m[30m[0m[30m[43m[43m[30m [0m[30m[43m[43m[30m[37m[0m[37m[43m[47m[30m 02:00:36 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[62D[?1h=[?2004hggit status[?1l>[?25l[?2004l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;76m❯[0m[38;5;76m[49m[39m[27m[24m git status[K[?25h
+]2;git status]1;gitOn branch master
+Your branch is ahead of 'origin/master' by 2 commits.
+  (use "git push" to publish your local commits)
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	[31mmodified:   scripts/src/script/KeyboardInteractions.ts[m
+	[31mmodified:   scripts/src/script/ScriptProcessRunner.ts[m
+	[31mmodified:   scripts/src/script/ScriptRunner.ts[m
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	[31mtypescript[m
+
+no changes added to commit (use "git add" and/or "git commit -a")
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m⇡2 [30m!3 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[44C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[37m[0m[37m[40m[47m[30m 02:00:48 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[62D[?1h=[?2004hggit add -A[?1l>[?25l[?2004l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;76m❯[0m[38;5;76m[49m[39m[27m[24m git add -A[K[?25h
+]2;git add -A]1;git[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m⇡2 [30m+4[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[47C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[37m[0m[37m[40m[47m[30m 02:00:51 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[65D[?1h=[?2004hggit commit -m '"  ""G"e"t" "s"c"r"i"p"t" "r"u"n"n"e"r" "u"s"i"n"g" "t"h"e" "n"e"w"[K "p"r"e"o"" " o"c"e"s"s" "m"a"n"a"g"e"r"[?1l>[?25l[?2004l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;76m❯[0m[38;5;76m[49m[39m[27m[24m git commit -m "Get script runner using the new process manager"[K[?25h
+]2;git commit -m "Get script runner using the new process manager"]1;git[master a60245b] Get script runner using the new process manager
+ 4 files changed, 2307 insertions(+), 120 deletions(-)
+ create mode 100644 typescript
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[42m[34m[0m[34m[42m[42m[30m [30mmaster [30m⇡3[0m[30m[42m[42m[30m [0m[30m[42m[49m[32m[0m[32m[49m[39m [0m[49m[39m[K[50C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[37m[0m[37m[40m[47m[30m 02:01:02 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[68D[?1h=[?2004hggit push[?1l>[?25l[?2004l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;76m❯[0m[38;5;76m[49m[39m[27m[24m git push[K[?25h
+]2;git push]1;gitEnumerating objects: 48, done.
+Counting objects:   2% (1/48)Counting objects:   4% (2/48)Counting objects:   6% (3/48)Counting objects:   8% (4/48)Counting objects:  10% (5/48)Counting objects:  12% (6/48)Counting objects:  14% (7/48)Counting objects:  16% (8/48)Counting objects:  18% (9/48)Counting objects:  20% (10/48)Counting objects:  22% (11/48)Counting objects:  25% (12/48)Counting objects:  27% (13/48)Counting objects:  29% (14/48)Counting objects:  31% (15/48)Counting objects:  33% (16/48)Counting objects:  35% (17/48)Counting objects:  37% (18/48)Counting objects:  39% (19/48)Counting objects:  41% (20/48)Counting objects:  43% (21/48)Counting objects:  45% (22/48)Counting objects:  47% (23/48)Counting objects:  50% (24/48)Counting objects:  52% (25/48)Counting objects:  54% (26/48)Counting objects:  56% (27/48)Counting objects:  58% (28/48)Counting objects:  60% (29/48)Counting objects:  62% (30/48)Counting objects:  64% (31/48)Counting objects:  66% (32/48)Counting objects:  68% (33/48)Counting objects:  70% (34/48)Counting objects:  72% (35/48)Counting objects:  75% (36/48)Counting objects:  77% (37/48)Counting objects:  79% (38/48)Counting objects:  81% (39/48)Counting objects:  83% (40/48)Counting objects:  85% (41/48)Counting objects:  87% (42/48)Counting objects:  89% (43/48)Counting objects:  91% (44/48)Counting objects:  93% (45/48)Counting objects:  95% (46/48)Counting objects:  97% (47/48)Counting objects: 100% (48/48)Counting objects: 100% (48/48), done.
+Delta compression using up to 14 threads
+Compressing objects:   2% (1/35)Compressing objects:   5% (2/35)Compressing objects:   8% (3/35)Compressing objects:  11% (4/35)Compressing objects:  14% (5/35)Compressing objects:  17% (6/35)Compressing objects:  20% (7/35)Compressing objects:  22% (8/35)Compressing objects:  25% (9/35)Compressing objects:  28% (10/35)Compressing objects:  31% (11/35)Compressing objects:  34% (12/35)Compressing objects:  37% (13/35)Compressing objects:  40% (14/35)Compressing objects:  42% (15/35)Compressing objects:  45% (16/35)Compressing objects:  48% (17/35)Compressing objects:  51% (18/35)Compressing objects:  54% (19/35)Compressing objects:  57% (20/35)Compressing objects:  60% (21/35)Compressing objects:  62% (22/35)Compressing objects:  65% (23/35)Compressing objects:  68% (24/35)Compressing objects:  71% (25/35)Compressing objects:  74% (26/35)Compressing objects:  77% (27/35)Compressing objects:  80% (28/35)Compressing objects:  82% (29/35)Compressing objects:  85% (30/35)Compressing objects:  88% (31/35)Compressing objects:  91% (32/35)Compressing objects:  94% (33/35)Compressing objects:  97% (34/35)Compressing objects: 100% (35/35)Compressing objects: 100% (35/35), done.
+Writing objects:   2% (1/35)Writing objects:   5% (2/35)Writing objects:   8% (3/35)Writing objects:  11% (4/35)Writing objects:  14% (5/35)Writing objects:  17% (6/35)Writing objects:  20% (7/35)Writing objects:  22% (8/35)Writing objects:  25% (9/35)Writing objects:  28% (10/35)Writing objects:  31% (11/35)Writing objects:  37% (13/35)Writing objects:  40% (14/35)Writing objects:  42% (15/35)Writing objects:  48% (17/35)Writing objects:  51% (18/35)Writing objects:  54% (19/35)Writing objects:  57% (20/35)Writing objects:  60% (21/35)Writing objects:  62% (22/35)Writing objects:  65% (23/35)Writing objects:  68% (24/35)Writing objects:  71% (25/35)Writing objects:  74% (26/35)Writing objects:  77% (27/35)Writing objects:  80% (28/35)Writing objects:  82% (29/35)Writing objects:  85% (30/35)Writing objects:  88% (31/35)Writing objects:  91% (32/35)Writing objects:  94% (33/35)Writing objects:  97% (34/35)Writing objects: 100% (35/35)Writing objects: 100% (35/35), 21.10 KiB | 7.03 MiB/s, done.
+Total 35 (delta 23), reused 0 (delta 0), pack-reused 0 (from 0)
+remote: Resolving deltas:   0% (0/23)[Kremote: Resolving deltas:   4% (1/23)[Kremote: Resolving deltas:   8% (2/23)[Kremote: Resolving deltas:  13% (3/23)[Kremote: Resolving deltas:  17% (4/23)[Kremote: Resolving deltas:  21% (5/23)[Kremote: Resolving deltas:  26% (6/23)[Kremote: Resolving deltas:  30% (7/23)[Kremote: Resolving deltas:  34% (8/23)[Kremote: Resolving deltas:  39% (9/23)[Kremote: Resolving deltas:  43% (10/23)[Kremote: Resolving deltas:  47% (11/23)[Kremote: Resolving deltas:  52% (12/23)[Kremote: Resolving deltas:  56% (13/23)[Kremote: Resolving deltas:  60% (14/23)[Kremote: Resolving deltas:  65% (15/23)[Kremote: Resolving deltas:  69% (16/23)[Kremote: Resolving deltas:  73% (17/23)[Kremote: Resolving deltas:  78% (18/23)[Kremote: Resolving deltas:  82% (19/23)[Kremote: Resolving deltas:  86% (20/23)[Kremote: Resolving deltas:  91% (21/23)[Kremote: Resolving deltas:  95% (22/23)[Kremote: Resolving deltas: 100% (23/23)[Kremote: Resolving deltas: 100% (23/23), completed with 10 local objects.[K
+To github.com:moneydance/jotai-iframe-bridge.git
+   ce9c3cb..a60245b  master -> master
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m!1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[50C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[37m[0m[37m[40m[47m[30m 02:01:06 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[68D[?1h=[?2004hgit pushcommit -m "Get script runner using the new process manager"[K[59Dpush[K[42C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[37m[0m[37m[40m[47m[30m 02:01:06 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[60D[8D        [8Dccd .. && pnpm run dev --processes lib[34Dscripts && pnpm build             [13D[14D/src/dev && grep -n "_err" ProcessManager.ts[K[44D && pnpm build[K[26C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[37m[0m[37m[40m[47m[30m 02:01:06 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[44D[21D.. && pnpm run dev --processes lib[37Dc                                    [36D ppnpm dev[?1l>[?25l[?2004l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;76m❯[0m[38;5;76m[49m[39m[27m[24m pnpm dev[K[?25h
+]2;pnpm dev]1;pnpm
+> jotai-iframe-bridge-workspace@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge
+> pnpm exec tsx scripts/dev-runner.ts
+
+Configuration: {
+  includeTags: [90mundefined[39m,
+  excludeTags: [90mundefined[39m,
+  processNames: [90mundefined[39m
+}
+Starting: host, remote, lib, host-test, lib-test
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [host] 
+> host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [remote] 
+> remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+
+
+[2:02:18 PM] [lib] 
+> jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+
+
+[2:02:18 PM] [host-test] 
+> host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+
+
+[2:02:18 PM] [lib-test] 
+> jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [remote] 
+  [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [remote]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+
+[2:02:18 PM] [host] 
+  [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+
+[2:02:18 PM] [lib] [34mCLI[39m Building entry: src/index.tsx
+
+[2:02:18 PM] [lib] [34mCLI[39m Using tsconfig: tsconfig.json
+
+[2:02:18 PM] [lib] [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+
+[2:02:18 PM] [lib] [34mCLI[39m Target: es2020
+
+[2:02:18 PM] [lib] [34mCLI[39m Cleaning output folder
+
+[2:02:18 PM] [lib] [34mCJS[39m Build start
+
+[2:02:18 PM] [lib] [34mESM[39m Build start
+
+[2:02:18 PM] [lib] [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+
+[2:02:18 PM] [lib] [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+
+[2:02:18 PM] [lib] [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+
+[2:02:18 PM] [lib] [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+
+[2:02:18 PM] [lib] [34mCLI[39m Watching for changes in "."
+
+[2:02:18 PM] [lib] [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [lib-test] 
+
+[2:02:18 PM] [lib-test] [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+
+
+[2:02:18 PM] [host-test] 
+[1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+
+[2:02:18 PM] [host-test] 
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [host-test] Port 63315 is in use, trying another one...
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m Port 63315 is in use, trying another one...
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [lib] [34mDTS[39m Build start
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m Port 63315 is in use, trying another one...
+[90m[2:02:19 PM][0m [33m[lib][0m [34mDTS[39m Build start
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [lib] [32mDTS[39m ⚡️ Build success in 822ms
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m Port 63315 is in use, trying another one...
+[90m[2:02:19 PM][0m [33m[lib][0m [34mDTS[39m Build start
+[90m[2:02:20 PM][0m [33m[lib][0m [32mDTS[39m ⚡️ Build success in 822ms
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [lib-test]  [32m✓[39m [30m[43m chromium [49m[39m test/HelloWorld.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m Port 63315 is in use, trying another one...
+[90m[2:02:19 PM][0m [33m[lib][0m [34mDTS[39m Build start
+[90m[2:02:20 PM][0m [33m[lib][0m [32mDTS[39m ⚡️ Build success in 822ms
+[90m[2:02:22 PM][0m [32m[lib-test][0m [32m✓[39m [30m[43m chromium [49m[39m test/HelloWorld.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [lib-test] 
+
+[2:02:18 PM] [lib-test] [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 14:02:19
+
+[2:02:18 PM] [lib-test] [2m   Duration [22m 2.80s[2m (transform 0ms, setup 145ms, collect 7ms, tests 10ms, environment 0ms, prepare 2.72s)[22m
+
+[2:02:18 PM] [lib-test] 
+
+[2:02:18 PM] [lib-test] [1m[42m PASS [49m[22m [32mWaiting for file changes...[39m
+
+[2:02:18 PM] [lib-test]        [2mpress [22m[1mh[22m[2m to show help[22m[2m, [22m[2mpress [22m[1mq[22m[2m to quit[22m
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m Port 63315 is in use, trying another one...
+[90m[2:02:19 PM][0m [33m[lib][0m [34mDTS[39m Build start
+[90m[2:02:20 PM][0m [33m[lib][0m [32mDTS[39m ⚡️ Build success in 822ms
+[90m[2:02:22 PM][0m [32m[lib-test][0m [32m✓[39m [30m[43m chromium [49m[39m test/HelloWorld.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+[90m[2:02:22 PM][0m [32m[lib-test][0m [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 14:02:19
+[90m[2:02:22 PM][0m [32m[lib-test][0m [2m   Duration [22m 2.80s[2m (transform 0ms, setup 145ms, collect 7ms, tests 10ms, environment 0ms, prepare 2.72s)[22m
+[90m[2:02:22 PM][0m [32m[lib-test][0m [1m[42m PASS [49m[22m [32mWaiting for file changes...[39m
+[90m[2:02:22 PM][0m [32m[lib-test][0m [2mpress [22m[1mh[22m[2m to show help[22m[2m, [22m[2mpress [22m[1mq[22m[2m to quit[22m
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+[2:02:18 PM] [host-test]  [32m✓[39m [30m[43m chromium [49m[39m src/App.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+
+[2:02:18 PM] [host-test] 
+
+[2:02:18 PM] [host-test] [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+
+[2:02:18 PM] [host-test] [2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+
+[2:02:18 PM] [host-test] [2m   Start at [22m 14:02:19
+
+[2:02:18 PM] [host-test] [2m   Duration [22m 2.91s[2m (transform 0ms, setup 112ms, collect 9ms, tests 8ms, environment 0ms, prepare 2.74s)[22m
+
+[2:02:18 PM] [host-test] 
+
+[2:02:18 PM] [host-test] [1m[42m PASS [49m[22m [32mWaiting for file changes...[39m
+
+[2:02:18 PM] [host-test]        [2mpress [22m[1mh[22m[2m to show help[22m[2m, [22m[2mpress [22m[1mq[22m[2m to quit[22m
+
+[1;1H[0J[1m🎯 Jotai Iframe Bridge Development Environment[0m
+Running: host, remote, lib, host-test, lib-test
+============================================================
+[1m📊 Summary View[0m
+============================================================
+Starting servers...
+Recent Activity:
+[90m[2:02:18 PM][0m [36m[host][0m > host@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vite
+[90m[2:02:18 PM][0m [35m[remote][0m > remote@0.0.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/remote
+> vite
+[90m[2:02:18 PM][0m [33m[lib][0m > jotai-iframe-bridge@0.1.0 dev /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> tsup --watch
+[90m[2:02:18 PM][0m [34m[host-test][0m > host@0.0.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host
+> vitest --watch
+[90m[2:02:18 PM][0m [32m[lib-test][0m > jotai-iframe-bridge@0.1.0 test:watch /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge
+> vitest --watch
+[90m[2:02:19 PM][0m [35m[remote][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m201[22m[2m[0m ms[22m
+[90m[2:02:19 PM][0m [35m[remote][0m [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5174[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5174[22m/[39m
+[90m[2:02:19 PM][0m [36m[host][0m [32m[1mVITE[22m v7.0.5[39m  [2mready in [0m[1m202[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.1.232:[1m5173[22m/[39m
+  [32m➜[39m  [1mNetwork[22m: [36mhttp://10.100.184.82:[1m5173[22m/[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Building entry: src/index.tsx
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Using tsconfig: tsconfig.json
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m tsup v8.5.0
+[34mCLI[39m Using tsup config: /Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge/tsup.config.ts
+[34mCLI[39m Running in watch mode
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Target: es2020
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Cleaning output folder
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCJS[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [34mESM[39m Build start
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js     [22m[32m769.00 B[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mESM[39m [1mdist/index.js.map [22m[32m998.00 B[39m
+[32mESM[39m ⚡️ Build success in 10ms
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs     [22m[32m1.82 KB[39m
+[90m[2:02:19 PM][0m [33m[lib][0m [32mCJS[39m [1mdist/index.cjs.map [22m[32m1.01 KB[39m
+[32mCJS[39m ⚡️ Build success in 11ms
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Watching for changes in "."
+[90m[2:02:19 PM][0m [33m[lib][0m [34mCLI[39m Ignoring changes in "**/{.git,node_modules}/**" | "dist"
+[90m[2:02:19 PM][0m [32m[lib-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/jotai-iframe-bridge[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m [1m[44m DEV [49m[22m [34mv3.2.4 [39m[90m/Users/bpusey/src/projects/jotai-iframe-bridge/packages/examples/host[39m
+[90m[2:02:19 PM][0m [34m[host-test][0m Port 63315 is in use, trying another one...
+[90m[2:02:19 PM][0m [33m[lib][0m [34mDTS[39m Build start
+[90m[2:02:20 PM][0m [33m[lib][0m [32mDTS[39m ⚡️ Build success in 822ms
+[90m[2:02:22 PM][0m [32m[lib-test][0m [32m✓[39m [30m[43m chromium [49m[39m test/HelloWorld.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+[90m[2:02:22 PM][0m [32m[lib-test][0m [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m4 passed[39m[22m[90m (4)[39m
+[2m   Start at [22m 14:02:19
+[90m[2:02:22 PM][0m [32m[lib-test][0m [2m   Duration [22m 2.80s[2m (transform 0ms, setup 145ms, collect 7ms, tests 10ms, environment 0ms, prepare 2.72s)[22m
+[90m[2:02:22 PM][0m [32m[lib-test][0m [1m[42m PASS [49m[22m [32mWaiting for file changes...[39m
+[90m[2:02:22 PM][0m [32m[lib-test][0m [2mpress [22m[1mh[22m[2m to show help[22m[2m, [22m[2mpress [22m[1mq[22m[2m to quit[22m
+[90m[2:02:22 PM][0m [34m[host-test][0m [32m✓[39m [30m[43m chromium [49m[39m src/App.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+[90m[2:02:22 PM][0m [34m[host-test][0m [2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[90m[2:02:22 PM][0m [34m[host-test][0m [2m      Tests [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[90m[2:02:22 PM][0m [34m[host-test][0m [2m   Start at [22m 14:02:19
+[90m[2:02:22 PM][0m [34m[host-test][0m [2m   Duration [22m 2.91s[2m (transform 0ms, setup 112ms, collect 9ms, tests 8ms, environment 0ms, prepare 2.74s)[22m
+[90m[2:02:22 PM][0m [34m[host-test][0m [1m[42m PASS [49m[22m [32mWaiting for file changes...[39m
+[90m[2:02:22 PM][0m [34m[host-test][0m [2mpress [22m[1mh[22m[2m to show help[22m[2m, [22m[2mpress [22m[1mq[22m[2m to quit[22m
+============================================================
+Controls:
+ 1. Summary
+ 2. [36mHost app development server[0m
+ 3. [35mRemote app development server[0m
+ 4. [33mLibrary build watcher[0m
+ 5. [34mHost app test watcher[0m
+ 6. [32mLibrary test watcher[0m
+Press 1-6 to switch views
+Press 'a' to show ALL logs in current view
+Press 'r' to refresh display
+Press Ctrl+C to quit
+
+🛑 DevRunner cleanup initiated...
+🔴 Concurrent manager stopping...
+🎯 Stopping 5 managed processes...
+🌳 Stopping process tree for host (PID: 53049)
+Killing process group for PID: 53049
+Sent SIGINT to process group 53049
+🌳 Stopping process tree for remote (PID: 53055)
+Killing process group for PID: 53055
+Sent SIGINT to process group 53055
+🌳 Stopping process tree for lib (PID: 53061)
+Killing process group for PID: 53061
+Sent SIGINT to process group 53061
+🌳 Stopping process tree for host-test (PID: 53067)
+Killing process group for PID: 53067
+Sent SIGINT to process group 53067
+🌳 Stopping process tree for lib-test (PID: 53073)
+Killing process group for PID: 53073
+Sent SIGINT to process group 53073
+^C[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[100m[34m[0m[34m[100m[100m[30m [30mmaster [30m!1[0m[30m[100m[100m[30m [0m[30m[100m[49m[90m[0m[90m[49m[39m [0m[49m[39m[K[41C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[33m[0m[33m[40m[43m[30m 54m 5s[0m[30m[43m[43m[30m[0m[30m[43m[43m[30m [0m[30m[43m[43m[30m[37m[0m[37m[43m[47m[30m 02:56:22 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[68D[?1h=[?2004h[?25l[A[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m!6 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[38C[0m[49m[30m[0m[30m[40m[32m [0m[32m[40m[40m[32m✔[0m[32m[40m[40m[32m [0m[32m[40m[40m[32m[33m[0m[33m[40m[43m[30m 54m 5s[0m[30m[43m[43m[30m[0m[30m[43m[43m[30m [0m[30m[43m[43m[30m[37m[0m[37m[43m[47m[30m 02:56:22 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[65D[?25h[?25l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;76m❯[0m[38;5;76m[49m[39m[27m[24m [K[?25h[?2004l
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m!6 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[43C[0m[49m[31m[0m[31m[41m[33m INT[0m[33m[41m[41m[33m ✘[0m[33m[41m[41m[33m [0m[33m[41m[41m[33m[37m[0m[37m[41m[47m[30m 02:56:22 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[65D[?1h=[?2004h[?25l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;196m❯[0m[38;5;196m[49m[39m[27m[24m [K[?25h[?2004l
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m!6 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[43C[0m[49m[31m[0m[31m[41m[33m INT[0m[33m[41m[41m[33m ✘[0m[33m[41m[41m[33m [0m[33m[41m[41m[33m[37m[0m[37m[41m[47m[30m 02:56:22 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[65D[?1h=[?2004h[?25l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;196m❯[0m[38;5;196m[49m[39m[27m[24m [K[?25h[?2004l
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m!6 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[43C[0m[49m[31m[0m[31m[41m[33m INT[0m[33m[41m[41m[33m ✘[0m[33m[41m[41m[33m [0m[33m[41m[41m[33m[37m[0m[37m[41m[47m[30m 02:56:27 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[65D[?1h=[?2004h[?25l[A[0m[27m[24m[J[0m[49m[27m[24m[38;5;196m❯[0m[38;5;196m[49m[39m[27m[24m [K[?25h[?2004l
+[1m[7m%[27m[1m[0m                                                                                                              ]2;bpusey@KJFXYNY7M2:~/src/projects/jotai-iframe-bridge]1;..iframe-bridge]7;file://KJFXYNY7M2/Users/bpusey/src/projects/jotai-iframe-bridge\[0m[27m[24m[J[0m[49m[39m
+[0m[44m[38;5;254m [1m[38;5;254m[44m[38;5;255m~[0m[38;5;255m[44m[44m[38;5;254m/[38;5;250ms[0m[38;5;250m[44m[44m[38;5;254m/[38;5;250mp[0m[38;5;250m[44m[44m[38;5;254m/[1m[38;5;254m[44m[38;5;255mjotai-iframe-bridge[0m[38;5;255m[44m[44m[38;5;254m[0m[38;5;254m[44m[44m[38;5;254m [0m[38;5;254m[44m[43m[34m[0m[34m[43m[43m[30m [30mmaster [30m!6 [30m?1[0m[30m[43m[43m[30m [0m[30m[43m[49m[33m[0m[33m[49m[39m [0m[49m[39m[K[43C[0m[49m[31m[0m[31m[41m[33m INT[0m[33m[41m[41m[33m ✘[0m[33m[41m[41m[33m [0m[33m[41m[41m[33m[37m[0m[37m[41m[47m[30m 02:56:27 PM[0m[30m[47m[47m[30m[0m[30m[47m[47m[30m [0m[30m[47m[49m[39m[65D[?1h=[?2004h

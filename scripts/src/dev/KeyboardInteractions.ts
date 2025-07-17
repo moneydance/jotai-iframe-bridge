@@ -1,13 +1,19 @@
+import { OptionSelector } from '../OptionSelector.js'
+import { safeAssignment } from '../utils/safeAssignment.js'
 import type { createStateManager } from './atoms.js'
 import type { DevRunnerConfig } from './DevRunnerConfig.js'
 
 export class KeyboardInteractions {
+  private isCleanedUp = false
+
   constructor(
     private stateManager: ReturnType<typeof createStateManager>,
     private config: DevRunnerConfig
   ) {}
 
   setupKeyboardControls(): void {
+    if (this.isCleanedUp) return
+
     process.stdin.setRawMode(true)
     process.stdin.resume()
     process.stdin.setEncoding('utf8')
@@ -17,53 +23,55 @@ export class KeyboardInteractions {
       if (key === '\u0003') {
         this.cleanup()
         process.exit(0)
-      }
-
-      // Handle refresh
-      if (key === 'r' || key === 'R') {
-        const currentView = this.stateManager.getActiveView()
-        this.stateManager.setActiveView(currentView)
         return
       }
 
-      // Handle toggle all logs
-      if (key === 'a' || key === 'A') {
+      // Handle Ctrl+A (toggle all logs)
+      if (key === '\u0001') {
         this.stateManager.toggleShowAllLogs()
         return
       }
 
-      // Handle numeric view selection
-      const num = parseInt(key, 10)
-      if (Number.isNaN(num)) return
-
-      const runningProcesses = this.config.getFilteredProcessNames()
-      if (!this.isValidViewNumber(num, runningProcesses)) return
-
-      const newView = this.getViewFromNumber(num, runningProcesses)
-      this.stateManager.setActiveView(newView)
+      // Handle view selection using OptionSelector
+      this.handleViewSelection(key)
     })
   }
 
+  private handleViewSelection(key: string): void {
+    if (this.isCleanedUp) return
+
+    const runningProcesses = this.config.getFilteredProcessNames()
+    const totalOptions = runningProcesses.length + 1 // +1 for summary view
+
+    const selectionIndex = OptionSelector.getSelectionIndex(key)
+    if (selectionIndex === -1 || selectionIndex >= totalOptions) return
+
+    // Index 0 = summary, Index 1+ = process views
+    if (selectionIndex === 0) {
+      this.stateManager.setActiveView('summary')
+      return
+    }
+
+    const processIndex = selectionIndex - 1
+    if (processIndex >= runningProcesses.length) return
+
+    this.stateManager.setActiveView(runningProcesses[processIndex])
+  }
+
   cleanup(): void {
+    if (this.isCleanedUp) return
+    this.isCleanedUp = true
+
+    // Set raw mode to false if TTY
     if (process.stdin.isTTY) {
-      process.stdin.setRawMode(false)
-    }
-    process.stdin.pause()
-  }
-
-  // Keyboard navigation utility functions
-  private isValidViewNumber(num: number, runningProcesses: string[]): boolean {
-    return num >= 1 && num <= runningProcesses.length + 1
-  }
-
-  private getViewFromNumber(num: number, runningProcesses: string[]): string {
-    if (num === 1) return 'summary'
-
-    const processIndex = num - 2
-    if (processIndex >= 0 && processIndex < runningProcesses.length) {
-      return runningProcesses[processIndex]
+      safeAssignment(() => {
+        process.stdin.setRawMode(false)
+      })
     }
 
-    return 'summary'
+    // Pause stdin
+    safeAssignment(() => {
+      process.stdin.pause()
+    })
   }
 }

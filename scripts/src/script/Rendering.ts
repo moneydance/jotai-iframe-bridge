@@ -1,6 +1,6 @@
+import { OptionSelector } from '../OptionSelector.js'
 import { type ThrottledFunction, throttle } from '../utils/throttle.js'
 import type { createScriptStateManager, LogEntry } from './atoms.js'
-import { OptionSelector } from './OptionSelector.js'
 import type { ScriptRunnerConfig } from './ScriptRunnerConfig.js'
 
 export class ScriptRendering {

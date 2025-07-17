@@ -1,11 +1,13 @@
+import { OptionSelector } from '../OptionSelector.js'
+import { safeAssignment } from '../utils/safeAssignment.js'
 import type { createScriptStateManager } from './atoms.js'
-import { OptionSelector } from './OptionSelector.js'
 import type { ScriptRunnerConfig } from './ScriptRunnerConfig.js'
 
 export class ScriptKeyboardInteractions {
   private onScriptSelected?: (scriptName: string) => void
   private onProcessKill?: () => void
   private onShutdown?: () => void
+  private isCleanedUp = false
 
   constructor(
     private stateManager: ReturnType<typeof createScriptStateManager>,
@@ -25,43 +27,57 @@ export class ScriptKeyboardInteractions {
   }
 
   setupKeyboardControls(): void {
+    if (this.isCleanedUp) return
+
     process.stdin.setRawMode(true)
     process.stdin.resume()
     process.stdin.setEncoding('utf8')
 
     process.stdin.on('data', (key: string) => {
-      // Handle Ctrl+C (since we're in raw mode, SIGINT won't work)
-      if (key === '\u0003') {
-        // Ctrl+C - trigger full shutdown via callback
-        if (this.onShutdown) {
-          this.onShutdown()
-        } else {
-          console.log('\n🛑 Ctrl+C detected, shutting down...')
-          this.cleanup()
-          process.exit(0)
-        }
-        return
-      }
-
-      // Handle Ctrl+R (rerun current script)
-      if (key === '\u0012') {
-        this.handleRerun()
-        return
-      }
-
-      // Handle Escape key
-      if (key === '\u001b') {
-        this.handleEscapeKey()
-        return
-      }
-
-      // Handle other keys based on current view
-      if (this.stateManager.shouldShowMenu()) {
-        this.handleMenuInput(key)
-      } else if (this.stateManager.shouldShowLogs()) {
-        this.handleExecutionInput(key)
-      }
+      this.handleKeyInput(key)
     })
+  }
+
+  private handleKeyInput(key: string): void {
+    // Handle Ctrl+C (since we're in raw mode, SIGINT won't work)
+    if (key === '\u0003') {
+      this.handleCtrlC()
+      return
+    }
+
+    // Handle Ctrl+R (rerun current script)
+    if (key === '\u0012') {
+      this.handleRerun()
+      return
+    }
+
+    // Handle Escape key
+    if (key === '\u001b') {
+      this.handleEscapeKey()
+      return
+    }
+
+    // Handle other keys based on current view
+    if (this.stateManager.shouldShowMenu()) {
+      this.handleMenuInput(key)
+      return
+    }
+
+    if (this.stateManager.shouldShowLogs()) {
+      this.handleExecutionInput(key)
+      return
+    }
+  }
+
+  private handleCtrlC(): void {
+    if (this.onShutdown) {
+      this.onShutdown()
+      return
+    }
+
+    console.log('\n🛑 Ctrl+C detected, shutting down...')
+    this.cleanup()
+    process.exit(0)
   }
 
   private handleEscapeKey(): void {
@@ -71,9 +87,13 @@ export class ScriptKeyboardInteractions {
         this.onProcessKill()
       }
       this.goBackToMenu()
-    } else if (this.stateManager.shouldShowMenu()) {
+      return
+    }
+
+    if (this.stateManager.shouldShowMenu()) {
       // In menu view - navigate back if possible
       this.navigateBack()
+      return
     }
   }
 
@@ -88,22 +108,20 @@ export class ScriptKeyboardInteractions {
   }
 
   private handleRerun(): void {
-    if (this.stateManager.shouldShowLogs()) {
-      // Rerun the current script
-      const currentScript = this.stateManager.getCurrentScript()
-      if (currentScript && this.onScriptSelected) {
-        this.onScriptSelected(currentScript.name)
-      }
-    }
+    if (!this.stateManager.shouldShowLogs()) return
+
+    // Rerun the current script
+    const currentScript = this.stateManager.getCurrentScript()
+    if (!currentScript || !this.onScriptSelected) return
+
+    this.onScriptSelected(currentScript.name)
   }
 
   private handleSelectionKey(key: string): void {
     const currentOptions = this.config.getCurrentOptions()
     const selectionIndex = OptionSelector.getSelectionIndex(key)
 
-    if (selectionIndex === -1 || selectionIndex >= currentOptions.length) {
-      return // Invalid selection
-    }
+    if (selectionIndex === -1 || selectionIndex >= currentOptions.length) return
 
     const selectedOption = currentOptions[selectionIndex]
 
@@ -112,11 +130,12 @@ export class ScriptKeyboardInteractions {
       if (this.config.navigateInto(selectedOption.groupName)) {
         this.stateManager.triggerNavigationUpdate()
       }
-    } else {
-      // Execute script
-      if (this.onScriptSelected) {
-        this.onScriptSelected(selectedOption.name)
-      }
+      return
+    }
+
+    // Execute script
+    if (this.onScriptSelected) {
+      this.onScriptSelected(selectedOption.name)
     }
   }
 
@@ -135,9 +154,19 @@ export class ScriptKeyboardInteractions {
   }
 
   cleanup(): void {
+    if (this.isCleanedUp) return
+    this.isCleanedUp = true
+
+    // Set raw mode to false if TTY
     if (process.stdin.isTTY) {
-      process.stdin.setRawMode(false)
+      safeAssignment(() => {
+        process.stdin.setRawMode(false)
+      })
     }
-    process.stdin.pause()
+
+    // Pause stdin
+    safeAssignment(() => {
+      process.stdin.pause()
+    })
   }
 }
