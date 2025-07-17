@@ -54,13 +54,23 @@ export class DevRunner {
   }
 
   private setupCleanupHandlers(): void {
-    const cleanup = () => {
+    const cleanup = async () => {
+      console.log('\n🛑 DevRunner cleanup initiated...')
+
+      // Stop processes first (with emoji logs)
+      await this.processManager.stop()
+
+      // Then cleanup UI components
       this.keyboardInteractions.cleanup()
       this.rendering.cleanup()
+
       // Clean up observer
       if (this.unsubscribeObserver) {
         this.unsubscribeObserver()
       }
+
+      console.log('👋 DevRunner cleanup complete')
+      process.exit(0)
     }
 
     process.on('SIGINT', cleanup)

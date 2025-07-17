@@ -13,35 +13,34 @@ export class KeyboardInteractions {
     process.stdin.setEncoding('utf8')
 
     process.stdin.on('data', (key: string) => {
+      // Handle Ctrl+C
       if (key === '\u0003') {
-        // Ctrl+C
         this.cleanup()
         process.exit(0)
       }
 
+      // Handle refresh
       if (key === 'r' || key === 'R') {
-        // Force refresh by touching an atom to trigger re-render
         const currentView = this.stateManager.getActiveView()
         this.stateManager.setActiveView(currentView)
         return
       }
 
+      // Handle toggle all logs
       if (key === 'a' || key === 'A') {
         this.stateManager.toggleShowAllLogs()
-        // Re-render happens automatically via observer
         return
       }
 
+      // Handle numeric view selection
       const num = parseInt(key, 10)
-      if (!Number.isNaN(num)) {
-        const runningProcesses = this.config.getFilteredProcessNames()
+      if (Number.isNaN(num)) return
 
-        if (this.isValidViewNumber(num, runningProcesses)) {
-          const newView = this.getViewFromNumber(num, runningProcesses)
-          this.stateManager.setActiveView(newView)
-          // Re-render happens automatically via observer
-        }
-      }
+      const runningProcesses = this.config.getFilteredProcessNames()
+      if (!this.isValidViewNumber(num, runningProcesses)) return
+
+      const newView = this.getViewFromNumber(num, runningProcesses)
+      this.stateManager.setActiveView(newView)
     })
   }
 

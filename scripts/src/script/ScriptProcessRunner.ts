@@ -1,4 +1,5 @@
 import concurrently, { KillOnSignal, LogError, LogExit, Logger, LogOutput } from 'concurrently'
+import { safeAssignment } from '../utils/safeAssignment.js'
 import type { createScriptStateManager } from './atoms.js'
 import type { ScriptDefinition, ScriptRunnerConfig } from './ScriptRunnerConfig.js'
 
@@ -30,17 +31,18 @@ export class ScriptProcessRunner {
     const command = this.config.buildCommand(scriptDefinition)
     this.stateManager.addLogEntry(`Starting: ${command}`)
 
-    try {
-      await this.runCommand(command, scriptDefinition)
-    } catch (error) {
+    const [success, error] = await safeAssignment(() => this.runCommand(command, scriptDefinition))
+
+    if (!success) {
       this.stateManager.addLogEntry(
         `Error: ${error instanceof Error ? error.message : String(error)}`
       )
-    } finally {
-      this.stateManager.setProcessRunning(false)
-      this.currentResult = null
-      this.isRunning = false
     }
+
+    // Cleanup always happens
+    this.stateManager.setProcessRunning(false)
+    this.currentResult = null
+    this.isRunning = false
   }
 
   killCurrentProcess(): void {

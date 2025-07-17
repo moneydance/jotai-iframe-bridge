@@ -55,18 +55,16 @@ export class DevRunnerConfig {
   getFilteredProcessNames(): string[] {
     let filtered = [...this.processes]
 
-    // Filter by specific process names if provided
-    if (this.processNames && this.processNames.length > 0) {
+    // Apply filters using early returns for cleaner logic
+    if (this.processNames?.length) {
       filtered = filtered.filter((p) => this.processNames?.includes(p.name))
     }
 
-    // Filter by include tags
-    if (this.includeTags && this.includeTags.length > 0) {
+    if (this.includeTags?.length) {
       filtered = filtered.filter((p) => this.includeTags?.some((tag) => p.tags.includes(tag)))
     }
 
-    // Filter by exclude tags
-    if (this.excludeTags && this.excludeTags.length > 0) {
+    if (this.excludeTags?.length) {
       filtered = filtered.filter((p) => !this.excludeTags?.some((tag) => p.tags.includes(tag)))
     }
 
