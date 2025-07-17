@@ -25,11 +25,7 @@ export class ScriptKeyboardInteractions {
     process.stdin.setEncoding('utf8')
 
     process.stdin.on('data', (key: string) => {
-      // Handle Ctrl+C
-      if (key === '\u0003') {
-        this.cleanup()
-        process.exit(0)
-      }
+      // KillOnSignal controller handles Ctrl+C, so we don't need to handle it here
 
       // Handle Ctrl+R (rerun current script)
       if (key === '\u0012') {

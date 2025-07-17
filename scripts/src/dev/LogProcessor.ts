@@ -1,7 +1,33 @@
+import type { Command } from 'concurrently'
 import type { createStateManager, LogEntry } from './atoms.js'
 
 export class LogProcessor {
   constructor(private stateManager: ReturnType<typeof createStateManager>) {}
+
+  processCommand(command: Command): void {
+    const processName = command.name
+
+    command.stdout.subscribe((data) => {
+      this.processOutput(processName, data.toString())
+    })
+
+    command.stderr.subscribe((data) => {
+      this.processOutput(processName, data.toString())
+    })
+
+    command.error.subscribe((error) => {
+      const message = error instanceof Error ? error.message : String(error)
+      this.processOutput(processName, `Process error: ${message}`)
+    })
+
+    command.close.subscribe((exitInfo) => {
+      if (exitInfo.exitCode === 0) {
+        this.processOutput(processName, `✅ Process completed successfully`)
+      } else {
+        this.processOutput(processName, `❌ Process failed with exit code: ${exitInfo.exitCode}`)
+      }
+    })
+  }
 
   processOutput(processName: string, rawData: string): void {
     const cleanData = this.cleanOutput(rawData)

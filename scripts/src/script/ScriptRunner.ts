@@ -50,15 +50,14 @@ export class ScriptRunner {
     // Setup keyboard controls
     this.keyboardInteractions.setupKeyboardControls()
 
-    // Setup cleanup handlers
+    // Setup cleanup handlers (let KillOnSignal handle the actual signal processing)
     this.setupCleanupHandlers()
 
-    // Keep the process running
+    // Keep the process running - let KillOnSignal controller handle termination
     await new Promise<void>((resolve) => {
-      // The process will keep running until user exits with Ctrl+C
-      // The cleanup handlers will call resolve when exiting
-      process.on('SIGINT', resolve)
-      process.on('SIGTERM', resolve)
+      // The KillOnSignal controller will handle Ctrl+C/SIGTERM
+      // We just need to handle the cleanup when the process exits
+      process.on('exit', resolve)
     })
   }
 
@@ -82,8 +81,7 @@ export class ScriptRunner {
       this.rendering.displayShutdown()
     }
 
-    process.on('SIGINT', cleanup)
-    process.on('SIGTERM', cleanup)
+    // Only handle exit event - let KillOnSignal controller handle signals
     process.on('exit', cleanup)
   }
 }

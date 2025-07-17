@@ -1,4 +1,4 @@
-import concurrently from 'concurrently'
+import concurrently, { KillOnSignal, LogError, LogExit, Logger, LogOutput } from 'concurrently'
 import type { createScriptStateManager } from './atoms.js'
 import type { ScriptDefinition, ScriptRunnerConfig } from './ScriptRunnerConfig.js'
 
@@ -46,13 +46,19 @@ export class ScriptProcessRunner {
   killCurrentProcess(): void {
     if (this.isRunning && this.currentResult) {
       this.stateManager.addLogEntry('Process terminated by user')
-      // concurrently handles the actual process killing
+      // KillOnSignal controller handles the actual process killing
       this.isRunning = false
       this.stateManager.setProcessRunning(false)
     }
   }
 
   private async runCommand(command: string, scriptDefinition: ScriptDefinition): Promise<void> {
+    // Create logger for concurrently
+    const logger = new Logger({
+      raw: false,
+      timestampFormat: 'HH:mm:ss.SSS',
+    })
+
     const { commands, result } = concurrently(
       [
         {
@@ -68,9 +74,14 @@ export class ScriptProcessRunner {
         },
       ],
       {
-        prefix: 'none', // We'll handle our own formatting
-        restartTries: 0,
-        raw: false,
+        logger,
+        outputStream: process.stdout,
+        controllers: [
+          new LogOutput({ logger }),
+          new LogError({ logger }),
+          new LogExit({ logger }),
+          new KillOnSignal({ process }), // Handle Ctrl+C reliably with SIGINT
+        ],
       }
     )
 
