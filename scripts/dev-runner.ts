@@ -1,10 +1,14 @@
 #!/usr/bin/env tsx
 
 import { Command } from 'commander'
-import { DevRunner, type DevRunnerConfig, type ProcessConfig } from './DevRunner.js'
+import {
+  DevRunner,
+  type DevRunnerConfigOptions,
+  type ProcessDefinition,
+} from './classes/DevRunner.js'
 
 // Define the process configurations with tags
-const processConfigs: ProcessConfig[] = [
+const processConfigs: ProcessDefinition[] = [
   {
     name: 'host',
     package: 'host',
@@ -59,9 +63,9 @@ program
   .option('--processes <names>', 'Run only specific processes by name (comma-separated)')
   .action(async (options) => {
     // Build configuration based on options
-    const config: DevRunnerConfig = {
-      processes: processConfigs,
+    const config: DevRunnerConfigOptions = {
       title: '🎯 Jotai Iframe Bridge Development Environment',
+      processes: processConfigs,
     }
 
     // Handle specific processes
@@ -69,7 +73,7 @@ program
       config.processNames = options.processes.split(',').map((s: string) => s.trim())
     }
 
-    // Handle custom tag filtering (overrides simple options)
+    // Handle custom tag filtering
     if (options.includeTags) {
       config.includeTags = options.includeTags.split(',').map((s: string) => s.trim())
     }
@@ -78,18 +82,13 @@ program
       config.excludeTags = options.excludeTags.split(',').map((s: string) => s.trim())
     }
 
-    // If no filtering specified, run everything
-    if (!config.includeTags && !config.excludeTags && !config.processNames) {
-      // Default to running everything
-    }
-
     console.log('Configuration:', {
       includeTags: config.includeTags,
       excludeTags: config.excludeTags,
       processNames: config.processNames,
     })
 
-    // Start the runner
+    // Create and start the development runner
     const runner = new DevRunner(config)
     await runner.start()
   })

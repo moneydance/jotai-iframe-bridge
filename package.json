@@ -6,9 +6,9 @@
   "description": "Monorepo for Jotai iframe bridge packages",
   "scripts": {
     "build": "pnpm -r build",
-    "dev": "tsx scripts/dev-runner.ts",
-    "dev:servers": "tsx scripts/dev-runner.ts --include-tags dev",
-    "dev:tests": "tsx scripts/dev-runner.ts --include-tags test",
+    "dev": "cd scripts && pnpm exec tsx dev-runner.ts",
+    "dev:servers": "cd scripts && pnpm exec tsx dev-runner.ts --include-tags dev",
+    "dev:tests": "cd scripts && pnpm exec tsx dev-runner.ts --include-tags test",
     "dev:concurrent": "concurrently -n \"host,remote,lib\" -c \"cyan,magenta,yellow\" \"pnpm --filter host dev\" \"pnpm --filter remote dev\" \"pnpm --filter jotai-iframe-bridge dev\"",
     "type-check": "pnpm -r type-check",
     "test": "pnpm -r test",
@@ -39,8 +39,6 @@
     "@biomejs/biome": "^2.1.1",
     "@types/node": "^22.16.4",
     "@types/react": "^19.0.0",
-    "commander": "^14.0.0",
-    "concurrently": "^8.2.2",
     "react": "^19.0.0",
     "tsx": "^4.20.3",
     "typescript": "^5.0.0"
