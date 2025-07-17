@@ -1,16 +1,39 @@
-import concurrently, { KillOnSignal, LogError, LogExit, Logger, LogOutput } from 'concurrently'
+import { concurrent } from '../utils/concurrent.js'
 import { safeAssignment } from '../utils/safeAssignment.js'
 import type { createScriptStateManager } from './atoms.js'
-import type { ScriptDefinition, ScriptRunnerConfig } from './ScriptRunnerConfig.js'
+import type { ScriptRunnerConfig } from './ScriptRunnerConfig.js'
 
 export class ScriptProcessRunner {
-  private currentResult: Promise<any> | null = null
+  private currentResult: Promise<void> | null = null
   private isRunning = false
+  private concurrentManager: ReturnType<typeof concurrent>
 
   constructor(
     private stateManager: ReturnType<typeof createScriptStateManager>,
     private config: ScriptRunnerConfig
-  ) {}
+  ) {
+    // Create concurrent manager with state manager integration
+    this.concurrentManager = concurrent({
+      onOutput: (_name: string, output: string) => {
+        const cleanOutput = this.cleanOutput(output)
+        if (cleanOutput) {
+          this.stateManager.addLogEntry(cleanOutput)
+        }
+      },
+      onError: (_name: string, error: Error) => {
+        this.stateManager.addLogEntry(`Process error: ${error.message}`)
+      },
+      onExit: (_name: string, code: number | null, signal: string | null) => {
+        if (code === 0) {
+          this.stateManager.addLogEntry(`✅ Script completed successfully`)
+        } else if (signal) {
+          this.stateManager.addLogEntry(`Process terminated by signal: ${signal}`)
+        } else {
+          this.stateManager.addLogEntry(`❌ Script failed with exit code: ${code}`)
+        }
+      },
+    })
+  }
 
   async executeScript(scriptName: string): Promise<void> {
     // Find the script definition
@@ -30,12 +53,21 @@ export class ScriptProcessRunner {
     // Build and execute command
     const command = this.config.buildCommand(scriptDefinition)
     this.stateManager.addLogEntry(`Starting: ${command}`)
+    this.stateManager.addLogEntry(`Process started: ${scriptDefinition.description}`)
 
-    const [success, error] = await safeAssignment(() => this.runCommand(command, scriptDefinition))
+    const result = await safeAssignment(() =>
+      this.concurrentManager.spawn(command, scriptDefinition.name, {
+        color: scriptDefinition.color,
+        env: {
+          FORCE_COLOR: '1',
+          CI: 'false',
+        },
+      })
+    )
 
-    if (!success) {
+    if (!result[0]) {
       this.stateManager.addLogEntry(
-        `Error: ${error instanceof Error ? error.message : String(error)}`
+        `Error: ${result[1] instanceof Error ? result[1].message : String(result[1])}`
       )
     }
 
@@ -45,83 +77,13 @@ export class ScriptProcessRunner {
     this.isRunning = false
   }
 
-  killCurrentProcess(): void {
-    if (this.isRunning && this.currentResult) {
-      this.stateManager.addLogEntry('Process terminated by user')
-      // KillOnSignal controller handles the actual process killing
-      this.isRunning = false
-      this.stateManager.setProcessRunning(false)
-    }
-  }
+  async killCurrentProcess(): Promise<void> {
+    if (!this.isRunning) return
 
-  private async runCommand(command: string, scriptDefinition: ScriptDefinition): Promise<void> {
-    // Create logger for concurrently
-    const logger = new Logger({
-      raw: false,
-      timestampFormat: 'HH:mm:ss.SSS',
-    })
-
-    const { commands, result } = concurrently(
-      [
-        {
-          command,
-          name: scriptDefinition.name,
-          prefixColor: scriptDefinition.color,
-          env: {
-            // Force color output from child processes
-            FORCE_COLOR: '1',
-            CI: 'false',
-            NO_COLOR: undefined,
-          },
-        },
-      ],
-      {
-        logger,
-        outputStream: process.stdout,
-        controllers: [
-          new LogOutput({ logger }),
-          new LogError({ logger }),
-          new LogExit({ logger }),
-          new KillOnSignal({ process }), // Handle Ctrl+C reliably with SIGINT
-        ],
-      }
-    )
-
-    this.currentResult = result
-
-    // Set up handlers for the single command
-    const scriptCommand = commands[0]
-
-    scriptCommand.stdout.subscribe((data) => {
-      const output = this.cleanOutput(data.toString())
-      if (output) {
-        this.stateManager.addLogEntry(output)
-      }
-    })
-
-    scriptCommand.stderr.subscribe((data) => {
-      const output = this.cleanOutput(data.toString())
-      if (output) {
-        this.stateManager.addLogEntry(output)
-      }
-    })
-
-    scriptCommand.error.subscribe((error) => {
-      const message = error instanceof Error ? error.message : String(error)
-      this.stateManager.addLogEntry(`Process error: ${message}`)
-    })
-
-    scriptCommand.close.subscribe((exitInfo) => {
-      if (exitInfo.exitCode === 0) {
-        this.stateManager.addLogEntry(`✅ Script completed successfully`)
-      } else {
-        this.stateManager.addLogEntry(`❌ Script failed with exit code: ${exitInfo.exitCode}`)
-      }
-    })
-
-    // Log that the process started
-    this.stateManager.addLogEntry(`Process started: ${scriptDefinition.description}`)
-    await result
+    this.stateManager.addLogEntry('Process terminated by user')
+    await this.concurrentManager.stop()
+    this.isRunning = false
+    this.stateManager.setProcessRunning(false)
   }
 
   private cleanOutput(rawData: string): string {

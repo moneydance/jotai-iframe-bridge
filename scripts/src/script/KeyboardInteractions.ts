@@ -5,6 +5,7 @@ import type { ScriptRunnerConfig } from './ScriptRunnerConfig.js'
 export class ScriptKeyboardInteractions {
   private onScriptSelected?: (scriptName: string) => void
   private onProcessKill?: () => void
+  private onShutdown?: () => void
 
   constructor(
     private stateManager: ReturnType<typeof createScriptStateManager>,
@@ -19,13 +20,28 @@ export class ScriptKeyboardInteractions {
     this.onProcessKill = handler
   }
 
+  setShutdownHandler(handler: () => void): void {
+    this.onShutdown = handler
+  }
+
   setupKeyboardControls(): void {
     process.stdin.setRawMode(true)
     process.stdin.resume()
     process.stdin.setEncoding('utf8')
 
     process.stdin.on('data', (key: string) => {
-      // KillOnSignal controller handles Ctrl+C, so we don't need to handle it here
+      // Handle Ctrl+C (since we're in raw mode, SIGINT won't work)
+      if (key === '\u0003') {
+        // Ctrl+C - trigger full shutdown via callback
+        if (this.onShutdown) {
+          this.onShutdown()
+        } else {
+          console.log('\n🛑 Ctrl+C detected, shutting down...')
+          this.cleanup()
+          process.exit(0)
+        }
+        return
+      }
 
       // Handle Ctrl+R (rerun current script)
       if (key === '\u0012') {

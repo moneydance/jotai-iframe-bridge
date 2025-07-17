@@ -1,3 +1,4 @@
+import { safeAssignment } from '../utils/safeAssignment.js'
 import { createScriptRunnerAtoms, createScriptStateManager } from './atoms.js'
 import { ScriptKeyboardInteractions } from './KeyboardInteractions.js'
 import { ScriptRendering } from './Rendering.js'
@@ -25,8 +26,18 @@ export class ScriptRunner {
     this.rendering = new ScriptRendering(this.stateManager, this.config)
     this.keyboardInteractions = new ScriptKeyboardInteractions(this.stateManager, this.config)
     this.processRunner = new ScriptProcessRunner(this.stateManager, this.config)
+  }
 
-    // Wire up keyboard interactions
+  async start(): Promise<void> {
+    const _runningOptions = this.config.getCurrentOptions()
+    console.log(`Starting script runner...`)
+
+    // Initialize components
+    this.unsubscribeObserver = this.stateManager.observeChanges(() =>
+      this.rendering.throttledRender()
+    )
+
+    // Set up keyboard interactions with shutdown handler
     this.keyboardInteractions.setScriptSelectedHandler((scriptName: string) => {
       this.executeScript(scriptName)
     })
@@ -34,55 +45,54 @@ export class ScriptRunner {
     this.keyboardInteractions.setProcessKillHandler(() => {
       this.processRunner.killCurrentProcess()
     })
-  }
 
-  async start(): Promise<void> {
-    console.log(`Starting: ${this.config.title}`)
+    // Set up shutdown handler for Ctrl+C in raw mode
+    this.keyboardInteractions.setShutdownHandler(async () => {
+      console.log('\n🛑 ScriptRunner cleanup initiated...')
 
-    // Set up reactive rendering - automatically re-render when state changes using throttled render
-    this.unsubscribeObserver = this.stateManager.observeChanges(() =>
-      this.rendering.throttledRender()
-    )
+      // Stop processes first
+      await this.processRunner.killCurrentProcess()
 
-    // Initial render (not throttled for immediate feedback)
+      // Then cleanup UI components
+      this.keyboardInteractions.cleanup()
+      this.rendering.cleanup()
+
+      // Clean up observer
+      if (this.unsubscribeObserver) {
+        this.unsubscribeObserver()
+      }
+
+      this.rendering.displayShutdown()
+      console.log('👋 ScriptRunner cleanup complete')
+      process.exit(0)
+    })
+
+    this.keyboardInteractions.setupKeyboardControls()
     this.rendering.render()
 
-    // Setup keyboard controls
-    this.keyboardInteractions.setupKeyboardControls()
+    // Since we handle Ctrl+C in raw mode, we don't need signal handlers
+    // Just handle the exit event for cleanup when process ends normally
+    process.on('exit', () => {
+      this.keyboardInteractions.cleanup()
+      this.rendering.cleanup()
+      if (this.unsubscribeObserver) {
+        this.unsubscribeObserver()
+      }
+    })
 
-    // Setup cleanup handlers (let KillOnSignal handle the actual signal processing)
-    this.setupCleanupHandlers()
-
-    // Keep the process running - let KillOnSignal controller handle termination
-    await new Promise<void>((resolve) => {
-      // The KillOnSignal controller will handle Ctrl+C/SIGTERM
-      // We just need to handle the cleanup when the process exits
+    return new Promise<void>((resolve) => {
       process.on('exit', resolve)
     })
   }
 
   private async executeScript(scriptName: string): Promise<void> {
-    try {
-      await this.processRunner.executeScript(scriptName)
-    } catch (error) {
+    const [success, error] = await safeAssignment(() =>
+      this.processRunner.executeScript(scriptName)
+    )
+
+    if (!success) {
       this.rendering.displayError(error instanceof Error ? error.message : String(error))
     }
-  }
-
-  private setupCleanupHandlers(): void {
-    const cleanup = () => {
-      this.keyboardInteractions.cleanup()
-      this.rendering.cleanup()
-      this.processRunner.killCurrentProcess()
-      // Clean up observer
-      if (this.unsubscribeObserver) {
-        this.unsubscribeObserver()
-      }
-      this.rendering.displayShutdown()
-    }
-
-    // Only handle exit event - let KillOnSignal controller handle signals
-    process.on('exit', cleanup)
   }
 }
 
