@@ -1,4 +1,9 @@
 {
-  "files": [],
-  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }]
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "outDir": "./dist",
+    "jsx": "react-jsx"
+  },
+  "include": ["src/**/*", "test/**/*"]
 }

@@ -4,11 +4,12 @@ export default defineConfig({
   entry: ['src/index.tsx'],
   format: ['cjs', 'esm'],
   dts: true,
-  splitting: false,
-  sourcemap: true,
   clean: true,
-  minify: false,
-  target: 'es2020',
+  external: ['react', 'react-dom', 'jotai', 'jotai-effect'],
   outDir: 'dist',
-  external: ['react', 'jotai'],
+  outExtension({ format }) {
+    return {
+      js: format === 'cjs' ? '.js' : '.mjs',
+    }
+  },
 })
