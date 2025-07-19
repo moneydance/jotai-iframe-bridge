@@ -1,8 +1,4 @@
-import {
-  type ChildConnectionConfig,
-  createChildBridge,
-  type RemoteProxy,
-} from 'jotai-iframe-bridge'
+import { type ConnectionConfig, createChildBridge, type RemoteProxy } from 'jotai-iframe-bridge'
 import { useEffect, useState } from 'react'
 
 // Simplified interfaces
@@ -18,8 +14,8 @@ interface ChildMethods {
 
 // Create bridge instance
 const createBridge = () => {
-  const config: ChildConnectionConfig<ChildMethods> = {
-    parentOrigin: '*',
+  const config: ConnectionConfig<ChildMethods> = {
+    allowedOrigins: ['*'],
     methods: {
       subtract: async (a: number, b: number) => {
         const result = a - b
