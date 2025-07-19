@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { createStore } from 'jotai'
 import type { ParentBridge } from 'jotai-iframe-bridge'
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest'
@@ -19,27 +20,21 @@ async function isRemoteAppRunning(): Promise<boolean> {
   }
 }
 
-// Helper function to wait for iframe load and bridge connection
+// Helper function to wait for UI to show connected state
 async function waitForIframeConnection(bridge: ParentBridge<ParentMethods, ChildMethods>) {
-  // Wait for the bridge connection to be actually established
   try {
-    console.log(`⏳ Waiting for bridge ${bridge.id} to connect...`)
-    const connection = await bridge.getConnectionPromise()
-    console.log(`✅ Bridge ${bridge.id} connection established!`)
+    console.log(`⏳ Waiting for bridge ${bridge.id} UI to show connected...`)
 
-    // Also wait for the remote proxy to be available
-    const _remoteProxy = await connection.promise
-    console.log(`🎯 Bridge ${bridge.id} remote proxy ready!`)
-
-    // Now wait for the UI to reflect the connected state
+    // Wait for the UI to reflect the connected state
     await waitFor(
       () => {
         expect(screen.getByTestId('connection-status')).toHaveTextContent('connected')
       },
       { timeout: 2000 }
     )
+    console.log(`✅ Bridge ${bridge.id} UI shows connected!`)
   } catch (error) {
-    console.error(`❌ Bridge ${bridge.id} connection failed:`, error)
+    console.error(`❌ Bridge ${bridge.id} UI connection failed:`, error)
     throw error
   }
 }
@@ -80,12 +75,13 @@ describe('AppContent - Real UI Testing', () => {
     })
     await waitForIframeConnection(testBridge)
     expect(screen.getByTestId('connection-status')).toHaveTextContent('connected')
-  }, 10000) // 10 second timeout for this test
+  })
 
-  test('can click connect button and see status change', () => {
+  test('can click connect button and see status change', async () => {
+    const user = userEvent.setup()
     renderApp(<AppContent />, { bridge: testBridge, store: testStore })
     const connectButton = screen.getByTestId('connect-button')
-    fireEvent.click(connectButton)
+    await user.click(connectButton)
     expect(screen.getByTestId('connection-status')).toHaveTextContent('connecting')
   })
 
@@ -97,7 +93,7 @@ describe('AppContent - Real UI Testing', () => {
     expect(screen.getByTestId('number-a-input')).toBeInTheDocument()
     expect(screen.getByTestId('number-b-input')).toBeInTheDocument()
     expect(screen.getByTestId('calculate-subtract-button')).toBeInTheDocument()
-  }, 10000) // 10 second timeout for this test
+  })
 
   test('calculate button is present and clickable when connected', async () => {
     renderApp(<AppContent />, { bridge: testBridge, store: testStore })
@@ -106,9 +102,10 @@ describe('AppContent - Real UI Testing', () => {
     const calculateButton = screen.getByTestId('calculate-subtract-button')
     expect(calculateButton).toBeInTheDocument()
     expect(calculateButton).not.toBeDisabled()
-  }, 10000) // 10 second timeout for this test
+  })
 
   test('calculation workflow produces correct result', async () => {
+    const user = userEvent.setup()
     renderApp(<AppContent />, { bridge: testBridge, store: testStore })
     await waitForIframeConnection(testBridge)
 
@@ -117,16 +114,18 @@ describe('AppContent - Real UI Testing', () => {
     const inputB = screen.getByTestId('number-b-input')
     const calculateButton = screen.getByTestId('calculate-subtract-button')
 
-    fireEvent.change(inputA, { target: { value: '15' } })
-    fireEvent.change(inputB, { target: { value: '5' } })
+    await user.clear(inputA)
+    await user.type(inputA, '15')
+    await user.clear(inputB)
+    await user.type(inputB, '5')
 
     // Click calculate button
-    fireEvent.click(calculateButton)
+    await user.click(calculateButton)
 
     // Wait for result to appear
     await waitFor(() => {
       const result = screen.getByTestId('calculation-result')
       expect(result).toHaveTextContent('10')
     })
-  }, 15000) // 15 second timeout for this test
+  })
 })

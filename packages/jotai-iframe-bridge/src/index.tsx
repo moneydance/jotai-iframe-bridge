@@ -511,10 +511,9 @@ function connectCallHandler(
 
 // ==================== Reactive Iframe Bridge ====================
 
-export interface IframeBridge<
-  _TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
-> {
+type LoadableAtom<T> = ReturnType<typeof loadable<T>>
+
+interface ReactiveIframeBridge<TRemoteMethods extends Methods = Methods> {
   init(remoteWindow: Window): void
   isInitialized(): boolean
   getConnectionPromise(): Promise<Connection<TRemoteMethods>>
@@ -526,15 +525,13 @@ export interface IframeBridge<
   retry(): void
 }
 
-type LoadableAtom<T> = ReturnType<typeof loadable<T>>
-
 function createReactiveIframeBridge<
   TLocalMethods extends Methods = Methods,
   TRemoteMethods extends Methods = Methods,
 >(
   config: ConnectionConfig<TLocalMethods>,
   store: Store = getDefaultStore()
-): IframeBridge<TLocalMethods, TRemoteMethods> {
+): ReactiveIframeBridge<TRemoteMethods> {
   // Core atoms
   const remoteWindowAtom = atom<Window | null>(null)
   const participantIdAtom = atom(generateId())
@@ -787,18 +784,6 @@ function createReactiveIframeBridge<
       unsubscribeFromMessengerChange()
     },
   }
-}
-
-// ==================== Factory Functions ====================
-
-export function createIframeBridge<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
->(
-  config: ConnectionConfig<TLocalMethods>,
-  store?: Store
-): IframeBridge<TLocalMethods, TRemoteMethods> {
-  return createReactiveIframeBridge<TLocalMethods, TRemoteMethods>(config, store)
 }
 
 // ==================== New Parent/Child Pattern ====================
