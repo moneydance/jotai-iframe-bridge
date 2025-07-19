@@ -19,8 +19,10 @@ function formatMethodPath(methodPath: string[]): string {
 
 function getMethodAtMethodPath(
   methodPath: string[],
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
   methods: Record<string, any>
-): Function | undefined {
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
+): (...args: any[]) => any | undefined {
   // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
   let current: any = methods
   for (const prop of methodPath) {

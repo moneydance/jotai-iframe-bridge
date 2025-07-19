@@ -1,6 +1,6 @@
-# Development and Testing Rules
+# Cursor Development Rules
 
-## TypeScript and Type Safety Guidelines
+## 1. TypeScript & Type Safety
 
 ### Core Type Safety Principles
 - **Strive for type safety but be pragmatic** - perfect types aren't always worth the cost
@@ -204,6 +204,49 @@ type Result<T, E = Error> =
 // But don't force this pattern everywhere - throwing is fine for many cases
 ```
 
+### Advanced TypeScript Patterns
+
+#### Type Inference from Implementation
+- **Use `ReturnType<typeof factory>` to derive types from factory functions**
+- **Avoid manual type duplication** - Let TypeScript infer complex types from actual implementations
+- **Factory Function Types** - For complex objects, prefer inferring types from the constructor
+
+```typescript
+// ✅ Good - Type inference from implementation
+function createBridgeAtoms<T>(config: Config) {
+  return {
+    windowAtom: atom<Window | null>(null),
+    connectionAtom: atom(createDeferred<T>()),
+    // ... more atoms
+  }
+}
+
+// Let TypeScript infer the complex type automatically
+type BridgeAtoms<T> = ReturnType<typeof createBridgeAtoms<T>>
+
+// ❌ Avoid - Manual type duplication
+interface BridgeAtoms<T> {
+  windowAtom: PrimitiveAtom<Window | null>
+  connectionAtom: WritableAtom<Deferred<T>, [any], void>
+  // ... manually typing each property
+}
+```
+
+#### Generic Type Constraints
+
+#### Use Constraints to Enable Safe Operations
+```typescript
+// ✅ Good - constraint enables the operation you need
+function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
+  return obj[key]
+}
+
+// ✅ Good - constraint ensures shape you need
+function processMethodObject<T extends Record<keyof T, (...args: any[]) => any>>(obj: T): T {
+  // Can safely call methods on obj
+}
+```
+
 ### Type Organization
 
 #### Co-locate Types with Related Code
@@ -228,107 +271,104 @@ export function processWithConfig(config: ComplexProcessingConfig): Result {
 }
 ```
 
-### Generic Type Constraints
+## 2. Testing Guidelines
 
-#### Use Constraints to Enable Safe Operations
-```typescript
-// ✅ Good - constraint enables the operation you need
-function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
-  return obj[key]
-}
+### Testing Philosophy
 
-// ✅ Good - constraint ensures shape you need
-function processMethodObject<T extends Record<keyof T, (...args: any[]) => any>>(obj: T): T {
-  // Can safely call methods on obj
-}
-```
-
-## Testing Philosophy
-
-### Tests Should Catch Bugs - Errors Are Good
+#### Tests Should Catch Bugs - Errors Are Good
 - **Never force tests to pass by changing expectations to match broken behavior**
 - Tests failing means they're doing their job - investigate the root cause
 - If a test fails, either fix the code or the test logic, not the expectations
 - Green tests that don't catch bugs are worse than red tests that reveal issues
 
-### Integration vs Unit Testing
+#### Integration vs Unit Testing
 - **Never mock files with `.integration` in the filename**
 - Integration tests should test real behavior, not mocked interactions
 - Unit tests can use mocks, integration tests should use real implementations
 - If an integration test needs external dependencies, prefer test environments over mocks
 
-### Test Timeout Strategy
+#### Test Timeout Strategy
 - Use fast timeouts (1-2 seconds) to fail quickly when things are broken
 - Don't increase timeouts to "fix" failing tests - fix the underlying issue
 - Fast feedback loops are more valuable than false green tests
 
-## Test Code Writing Guidelines
+### Test Code Writing Guidelines
 *Based on Michael Lynch's "Why Good Developers Write Bad Unit Tests" (https://mtlynch.io/good-developers-bad-tests/)*
 
-### Core Principle: Test Code is Different from Production Code
+#### Core Principle: Test Code is Different from Production Code
 - **Good production code is well-factored; good test code is _obvious_**
 - Tests should be diagnostic tools that are simple and clear
 - Don't apply production code abstractions blindly to test code
 
-### Keep the Reader in Your Test Function
+#### Keep the Reader in Your Test Function
 - **The reader should understand your test without reading any other code**
 - When a test breaks, developers should diagnose the problem by reading the test function top to bottom
 - Avoid forcing readers to jump between files to understand test behavior
 
-### Embrace Test Code "Anti-Patterns"
+#### Embrace Test Code "Anti-Patterns"
 
-#### Accept Redundancy for Simplicity
+##### Accept Redundancy for Simplicity
 - **Dare to violate DRY if it supports simplicity**
 - Copy/paste test setup code rather than abstract it if it makes tests clearer
 - Redundancy is acceptable if it prevents obscuring test intent
 
-#### Inline Mocks and Setup
+##### Inline Mocks and Setup
 - **Never create separate mock files** - define mocks inline within test functions
 - Keep all test data and setup visible in the test function
 - Example: Don't create `mockConnection.ts` - create mocks inside each test
 
-#### Use Magic Numbers in Tests
+##### Use Magic Numbers in Tests
 - **Prefer magic numbers to named constants in test code**
 - `expect(result).toBe(42)` is clearer than `expect(result).toBe(EXPECTED_RESULT)`
 - Don't create `TEST_STARTING_VALUE = 100` - just use `100` directly
 
-#### Write Long, Descriptive Test Names
+##### Write Long, Descriptive Test Names
 - **Name tests so others can diagnose failures from the name alone**
 - `should_return_null_when_stream_is_empty` is better than `test_next_token`
 - Test names are only written once but read many times when they fail
 
-### Helper Methods Guidelines
+#### Helper Methods Guidelines
 - **When tempted to write test helper methods, try refactoring production code instead**
 - If helpers are necessary, they should NOT:
   - Bury critical values that affect test expectations
   - Interact with the object under test
 - Helpers should only extract truly irrelevant boilerplate
 
-### Test Organization
+#### Test Organization
 - Place tests in `test/` folder outside of `src/`
 - Mirror the `src/` directory structure in `test/`
 - Each source file should have a corresponding test file in the same relative path
 
-## File and Folder Structure Guidelines
+#### Testing Commands
+Run tests with:
+```bash
+npm test
+# or for specific packages
+cd packages/package-name && npm test
+```
+
+## 3. Code Architecture & Structure
+
+### File and Folder Structure Guidelines
 *Based on Kent C. Dodds' "Colocation" principles (https://kentcdodds.com/blog/colocation)*
 
-### Core Principle: Place Code as Close to Where It's Relevant as Possible
+#### Core Principle: Place Code as Close to Where It's Relevant as Possible
 - **"Things that change together should be located as close as reasonable"**
 - Maximize maintainability, applicability, and ease of use through proximity
 
-### Feature-Based Organization
+#### Feature-Based Organization
 - Group related functionality together in feature folders
 - Example: `connection/` folder contains all connection-related code
 - Example: `bridge/` folder contains all bridge-related code
 - Example: `react/` folder contains all React-specific code
 
-### Benefits of Colocation
+#### Benefits of Colocation
 - **Maintainability**: Related files stay in sync when changes are made
 - **Applicability**: Developers see the full context when making changes
 - **Ease of use**: No context switching between distant file locations
 - **Open Source Ready**: Features can be extracted by copying folders
 
-### File Structure Pattern
+#### File Structure Pattern
 ```
 src/
 ├── feature-name/
@@ -342,7 +382,7 @@ test/
 │   └── helper.test.ts        # Utility tests
 ```
 
-### When to Break Apart Files
+#### When to Break Apart Files
 - If a single file becomes too large to conceptualize
 - When distinct concerns emerge within a feature
 - But keep related concerns in the same folder
@@ -385,18 +425,52 @@ bridge/types.ts           // Bridge-specific types like ConnectionConfig
 utils/generateId.ts       // Generic utilities only
 ```
 
-#### Refactoring Guidelines
-- **Colocation beats categorization** - Put code where it's used, not where it "belongs" abstractly
-- **Break apart monolithic files** by feature/responsibility, not by code type
-- **Move types before refactoring logic** - Establish clean type boundaries first
-- **Test after each major move** - Ensure builds and tests pass between changes
-
-### Exceptions to Colocation
+#### Exceptions to Colocation
 - Documentation spanning multiple features goes at appropriate folder level
 - End-to-end tests that span the entire system go at project root
 - **Only truly generic utilities** that are used across many features go in `utils/` folder
 
-## Code Style Guidelines
+### Function Decomposition Guidelines
+- **Decompose for clarity, not just size** - Split functions when they have distinct responsibilities
+- **Avoid unnecessary wrapper functions** - Don't create wrappers just to reduce line count
+- **Natural breakpoints matter** - Split at logical boundaries (setup, processing, cleanup)
+- **Consider the call site** - Would the caller benefit from direct access to sub-functions?
+
+```typescript
+// ✅ Good - Logical decomposition
+function createBridge() {
+  const atoms = createBridgeAtoms() // Logical unit: atom setup
+  const cleanup = createEffect()    // Logical unit: effect management
+
+  return { // Direct implementation - no unnecessary wrapper
+    connect: () => { /* logic */ },
+    destroy: () => { /* logic */ }
+  }
+}
+
+// ❌ Avoid - Unnecessary wrapper
+function createBridge() {
+  const atoms = createBridgeAtoms()
+  const cleanup = createEffect()
+
+  // Pointless wrapper function
+  return createBridgeImplementation(atoms, cleanup)
+}
+```
+
+### Refactoring Guidelines
+- **Colocation beats categorization** - Put code where it's used, not where it "belongs" abstractly
+- **Break apart monolithic files** by feature/responsibility, not by code type
+- **Move types before refactoring logic** - Establish clean type boundaries first
+- **Test after each major move** - Ensure builds and tests pass between changes
+- **Question every abstraction** - Each wrapper function should add genuine value
+
+### Architecture Decisions
+- Use Jotai reactive patterns over manual state management
+- Prefer declarative over imperative approaches
+- Eliminate race conditions through proper state synchronization
+
+## 4. Code Style & Patterns
 
 ### Modern ES6+ Patterns
 - **Use optional chaining (`?.`)** to safely access nested properties
@@ -531,7 +605,7 @@ async function fetchData(url: string) {
 - **Single responsibility** - Each function should do one thing well
 - **Consistent naming** - `camelCase` for variables/functions, `PascalCase` for types/components
 
-## Development Process
+## 5. Development Process
 
 ### Analyze Before Acting
 - **Always identify and describe issues before implementing solutions**
@@ -545,34 +619,20 @@ async function fetchData(url: string) {
 - Use parallel tool calls when gathering information
 - Validate fixes with tests after implementation
 
-### Architecture Decisions
-- Use Jotai reactive patterns over manual state management
-- Prefer declarative over imperative approaches
-- Eliminate race conditions through proper state synchronization
-- Direct iframe element access instead of DOM searching
-
-## Communication
+### Communication
 - Explain technical decisions clearly
 - Use specific examples when describing issues
 - Provide context for why changes are needed
 - Never say "comprehensive" - be specific about what's included
 
-## Error Handling
+### Error Handling
 - Don't suppress or work around errors - fix them
 - Investigate TypeScript errors properly before adding type assertions
 - Use proper error boundaries and cleanup in React components
 - Log meaningful information for debugging
 
-## Performance
+### Performance
 - Prefer reactive state updates over polling
 - Use proper cleanup in effects and event listeners
 - Minimize re-renders through proper dependency arrays
 - Consider lazy loading for non-critical features
-
-## Testing Commands
-Run tests with:
-```bash
-npm test
-# or for specific packages
-cd packages/package-name && npm test
-```
