@@ -100,8 +100,6 @@ export class WindowMessenger {
           data
         )
         this.messageCallbacks.forEach((callback) => callback(data))
-      } else {
-        this.log?.('❌ Invalid message format:', data)
       }
     } else {
       this.log?.('❌ Message ignored: Origin not allowed:', origin, 'allowed:', this.allowedOrigins)

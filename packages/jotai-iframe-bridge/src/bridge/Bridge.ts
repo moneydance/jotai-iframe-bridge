@@ -17,6 +17,7 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
   // Core atoms
   const remoteWindowAtom = atom<Window | null>(null)
   const participantIdAtom = atom(generateId)
+  const messengerAtom = atom<WindowMessenger | null>(null)
 
   // Lazy deferred atom - null when disconnected, creates deferred when connecting
   const remoteProxyDeferredAtom = atom<ReturnType<
@@ -37,6 +38,25 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
   const reset = (store: Store) => {
     config.log?.(`🧹 Resetting Bridge`)
 
+    const messenger = store.get(messengerAtom)
+    const participantId = store.get(participantIdAtom)
+
+    // Send DestroyMessage to paired participant if we have an active messenger
+    if (messenger) {
+      const destroyMessage = {
+        namespace: 'jotai-iframe-bridge',
+        type: 'DESTROY' as const,
+        fromParticipantId: participantId,
+      }
+
+      try {
+        messenger.sendMessage(destroyMessage)
+        config.log?.(`📤 Sent DESTROY message to paired participant: ${participantId}`)
+      } catch (error) {
+        config.log?.(`❌ Failed to send DESTROY message:`, error)
+      }
+    }
+
     // Clean up local state
     const remoteProxyDeferred = store.get(remoteProxyDeferredAtom)
     if (remoteProxyDeferred?.status === 'pending') {
@@ -44,6 +64,7 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
     }
     store.set(remoteProxyDeferredAtom, null) // Set to null for disconnected state
     store.set(remoteWindowAtom, null)
+    store.set(messengerAtom, null)
   }
 
   const connect = (store: Store, targetWindow: Window) => {
@@ -58,6 +79,7 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
 
     // Create messenger and start handshake immediately
     const messenger = new WindowMessenger(targetWindow, config.allowedOrigins, config.log)
+    store.set(messengerAtom, messenger) // Store messenger for destroy functionality
     const participantId = store.get(participantIdAtom)
     const handshakeTimeout = config.timeout ?? 10000
 
@@ -78,6 +100,11 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
           deferred.reject(error)
         }
       },
+      onDestroy: () => {
+        // Reset bridge atoms when DESTROY message is received from paired participant
+        config.log?.('🔄 Received DESTROY message, resetting bridge atoms')
+        reset(store)
+      },
     })
 
     // Return cleanup function for bridge to store
@@ -87,6 +114,7 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
   return {
     remoteWindowAtom,
     participantIdAtom,
+    messengerAtom,
     remoteProxyDeferredAtom,
     remoteProxyPromiseAtom,
     remoteProxyAtom,

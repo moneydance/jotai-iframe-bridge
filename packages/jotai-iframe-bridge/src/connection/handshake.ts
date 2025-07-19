@@ -23,6 +23,7 @@ export interface HandshakeConfig {
   // biome-ignore lint/suspicious/noExplicitAny: Generic handshake callback accepts any type of RemoteProxy
   onConnectionEstablished: (remoteProxy: RemoteProxy<any>) => void
   onError: (error: Error) => void
+  onDestroy?: () => void // Called when DESTROY message is received from paired participant
 }
 
 interface HandshakeState {
@@ -31,6 +32,7 @@ interface HandshakeState {
   remoteProxyDestroy: (() => void) | null
   messageHandler: ((message: Message) => void) | null
   pairedParticipantId: string | null // Track who we're paired with
+  timeoutId: NodeJS.Timeout | null // Track timeout for cleanup
 }
 
 // ==================== Message Handlers ====================
@@ -199,7 +201,7 @@ function handleDestroyMessage<_TRemoteMethodsss extends Methods>(
   config: HandshakeConfig,
   state: HandshakeState
 ): void {
-  const { log } = config
+  const { log, onDestroy } = config
 
   // Check if this DESTROY is from our paired participant
   if (state.pairedParticipantId && message.fromParticipantId === state.pairedParticipantId) {
@@ -216,6 +218,9 @@ function handleDestroyMessage<_TRemoteMethodsss extends Methods>(
     state.remoteProxyDestroy = null
 
     log?.('Cleared pairing, ready for new connections')
+
+    // Notify the bridge that we received a destroy message
+    onDestroy?.()
   } else {
     log?.(
       `Ignoring DESTROY from unpaired participant: ${message.fromParticipantId} (paired with: ${state.pairedParticipantId})`
@@ -232,10 +237,14 @@ function establishConnection<TRemoteMethods extends Methods>(
 
   state.handshakeCompleted = true
 
-  // Remove the message handler if it exists
-  if (state.messageHandler) {
-    messenger.removeMessageHandler(state.messageHandler)
+  // Clear the handshake timeout since connection was successful
+  if (state.timeoutId) {
+    clearTimeout(state.timeoutId)
+    state.timeoutId = null
   }
+
+  // Keep the handshake message handler active to receive DESTROY messages
+  // It will be removed only during cleanup
 
   const { remoteProxy, destroy } = connectRemoteProxy<TRemoteMethods>(
     messenger,
@@ -258,6 +267,13 @@ function createMessageHandler<TRemoteMethods extends Methods>(
   return (message: Message) => {
     log?.('📨 Handshake handler received message:', message.type, message)
 
+    // DESTROY messages should always be processed, even after handshake completion
+    if (isDestroyMessage(message)) {
+      handleDestroyMessage<TRemoteMethods>(message, config, state)
+      return
+    }
+
+    // Other handshake messages are only processed before completion
     if (state.handshakeCompleted) {
       log?.('⚠️ Handshake already completed, ignoring message')
       return
@@ -269,8 +285,6 @@ function createMessageHandler<TRemoteMethods extends Methods>(
       handleAck1Message<TRemoteMethods>(message, config, state)
     } else if (isAck2Message(message)) {
       handleAck2Message<TRemoteMethods>(message, config, state)
-    } else if (isDestroyMessage(message)) {
-      handleDestroyMessage<TRemoteMethods>(message, config, state)
     } else {
       log?.('📨 Ignoring non-handshake message:', message.type)
     }
@@ -316,6 +330,7 @@ export function createHandshakeHandler<TRemoteMethods extends Methods = Methods>
     remoteProxyDestroy: null,
     messageHandler: null,
     pairedParticipantId: null,
+    timeoutId: null,
   }
 
   // Set up call handler for incoming method calls
@@ -355,15 +370,17 @@ export function createHandshakeHandler<TRemoteMethods extends Methods = Methods>
       onError(new Error(`Connection timeout after ${timeout}ms`))
     }
   }, timeout)
+  state.timeoutId = timeoutId
 
   log?.('✅ Handshake handler setup complete')
 
   // Return cleanup function
   return () => {
-    // biome-ignore lint/suspicious/noDebugger: <explanation>
-    debugger
     log?.('🧹 Cleaning up handshake handler')
-    clearTimeout(timeoutId)
+    if (state.timeoutId) {
+      clearTimeout(state.timeoutId)
+      state.timeoutId = null
+    }
     messenger.removeMessageHandler(handleHandshakeMessage)
     state.callHandlerDestroy?.()
     state.remoteProxyDestroy?.()
