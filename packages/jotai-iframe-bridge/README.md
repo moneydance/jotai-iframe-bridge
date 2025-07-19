@@ -1,424 +1,309 @@
-# jotai-iframe-bridge
+# Jotai Iframe Bridge
 
-A robust iframe communication bridge inspired by Penpal, providing secure postMessage communication between parent and child windows with a clean, type-safe API.
+A robust iframe communication bridge with type-safe API and reactive state management using Jotai.
 
 ## Features
 
-- 🚀 **Type Safe**: Full TypeScript support with strongly-typed method interfaces
-- 🔒 **Secure**: Origin-based security with configurable allowed origins
-- 🎯 **Promise-based**: Clean async/await patterns for all operations
-- 🔄 **Connection Management**: Built-in handshake, retry, and cleanup logic
-- 📡 **Real postMessage**: Actual cross-window communication using postMessage API
-- 🛡️ **Error Handling**: Proper error serialization and timeout management
-- 📦 **Minimal**: No external dependencies, pure JavaScript implementation
-- ⚡ **Performance**: Efficient communication with message handlers and proxies
+- **Type-safe communication** between parent and child iframes
+- **Reactive state management** with Jotai atoms
+- **Robust three-way handshake protocol** for reliable connection establishment
+- **Automatic reconnection support** for iframe reloads
+- **React hooks** for easy integration
+- **Bidirectional method calls** with Promise-based API
 
-## Architecture
+## Three-Way Handshake Protocol
 
-This library implements a communication protocol similar to Penpal:
+This library implements a sophisticated handshake protocol inspired by Penpal to ensure robust communication between parent and child frames. The protocol solves several challenges:
 
-1. **Handshake**: SYN/ACK message exchange to establish connection
-2. **Method Calls**: CALL/REPLY message pairs for remote method invocation
-3. **Proxies**: Dynamic proxy objects that make remote calls transparent
-4. **Security**: Origin validation and message namespace protection
+### Protocol Requirements
 
-## Installation
+1. **Either participant can initiate** - Parent or child can start the handshake
+2. **Handles timing issues** - One participant may not be ready when the other starts
+3. **Avoids race conditions** - Both participants can send initial messages simultaneously
+4. **Confirms bidirectional communication** - Both sides know the other is receiving messages
+5. **Supports reconnection** - Either side can re-establish connection (e.g., iframe reload)
 
-```bash
-npm install jotai-iframe-bridge
-# or
-yarn add jotai-iframe-bridge
-# or
-pnpm add jotai-iframe-bridge
+### Protocol Flow
+
+![Handshake Protocol Diagram](assets/handshakeDiagram.png)
+
+### Protocol Details
+
+#### 1. SYN Exchange
+- Both participants send SYN messages containing their randomly generated participant IDs
+- When receiving a SYN, each participant sends another SYN to ensure the other side received it
+- This handles cases where one participant wasn't ready for the initial SYN
+
+#### 2. Leadership Determination
+- Both participants compare their IDs using lexicographical string comparison
+- The participant with the lexicographically higher ID becomes the "handshake leader"
+- This ensures exactly one participant will send ACK1, avoiding race conditions
+
+#### 3. ACK1/ACK2 Exchange
+- **Leader sends ACK1** to the follower
+- **Follower receives ACK1** and responds with ACK2
+- **Leader receives ACK2** and both sides establish the connection
+- This confirms bidirectional communication is working
+
+#### 4. Connection Establishment
+- Both sides create remote proxies for method calls
+- Connection promises resolve, making the bridge ready for use
+- The connection is fully established and method calls can begin
+
+### Example Logs
+
+Here's what a successful handshake looks like in the logs:
+
+```
+🚌 Host Bridge: Sending SYN message { "participantId": "itmpknos1", "type": "SYN" }
+🚌 Child Bridge: Sending SYN message { "participantId": "93ym8wst9", "type": "SYN" }
+
+🚌 Host Bridge: Received SYN message from participant: 93ym8wst9
+🚌 Host Bridge: Leadership check: itmpknos1 > 93ym8wst9 = true
+🚌 Host Bridge: Sending ACK1 message as leader
+
+🚌 Child Bridge: Received ACK1 message, sending ACK2 response
+🚌 Child Bridge: Connection established successfully (follower)
+
+🚌 Host Bridge: Received ACK2 message, establishing connection
+🚌 Host Bridge: Connection established successfully (leader)
 ```
 
-## Quick Start
+## Basic Usage
 
-### Parent Window
+### Parent (Host) Application
 
 ```tsx
-import React, { useRef, useEffect, useState } from 'react'
-import { createIframeBridge, type IframeBridge, type ConnectionConfig } from 'jotai-iframe-bridge'
+import { createParentBridge, makeParentBridgeHooks } from 'jotai-iframe-bridge'
 
-// Define type-safe method interfaces
+// Define method interfaces
 interface ParentMethods {
-  notifyParent: (message: string) => void
-  getParentData: () => Promise<string>
+  add: (a: number, b: number) => Promise<number>
 }
 
 interface ChildMethods {
-  getData: () => Promise<string>
-  updateValue: (value: string) => Promise<void>
-  calculate: (a: number, b: number) => Promise<number>
+  subtract: (a: number, b: number) => Promise<number>
 }
 
-export const ParentComponent: React.FC = () => {
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [bridge, setBridge] = useState<IframeBridge<ParentMethods, ChildMethods> | null>(null)
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected')
+// Create bridge
+const bridge = createParentBridge<ParentMethods, ChildMethods>({
+  allowedOrigins: ['*'],
+  methods: {
+    add: async (a, b) => a + b
+  }
+})
 
-  useEffect(() => {
-    // Create bridge configuration
-    const config: ConnectionConfig<ParentMethods> = {
-      allowedOrigins: ['https://child-domain.com'], // Configure for your domain
-      methods: {
-        notifyParent: (message: string) => {
-          console.log('Received from child:', message)
-          alert(`Child says: ${message}`)
-        },
-        getParentData: async () => {
-          return 'Data from parent window'
-        }
-      },
-      timeout: 5000,
-      log: (...args) => console.log('Bridge:', ...args) // Optional logging
+// Create provider and hooks
+const { ParentBridgeProvider, hooks } = makeParentBridgeHooks(bridge)
+const { useParentBridge, useRemoteProxy, useConnection } = hooks
+
+function App() {
+  return (
+    <ParentBridgeProvider>
+      <MyComponent />
+    </ParentBridgeProvider>
+  )
+}
+
+function MyComponent() {
+  const bridge = useParentBridge()
+  const remoteProxy = useRemoteProxy()
+
+  const handleIframeRef = (iframe: HTMLIFrameElement | null) => {
+    if (iframe?.contentWindow) {
+      bridge.init(iframe)
+      bridge.connect()
     }
-
-    // Create bridge instance
-    const bridgeInstance = createIframeBridge<ParentMethods, ChildMethods>(config)
-    setBridge(bridgeInstance)
-
-    return () => bridgeInstance.destroy()
-  }, [])
-
-  const initializeConnection = () => {
-    if (!bridge || !iframeRef.current?.contentWindow) return
-
-    setConnectionStatus('connecting')
-
-    // Set the iframe's contentWindow as the remote window
-    bridge.setRemoteWindow(iframeRef.current.contentWindow)
-
-    // Wait for connection to be established
-    bridge.getConnectionPromise()
-      .then(() => {
-        console.log('Connection established!')
-        setConnectionStatus('connected')
-      })
-      .catch((error) => {
-        console.error('Connection failed:', error)
-        setConnectionStatus('disconnected')
-      })
   }
 
   const callChildMethod = async () => {
-    if (!bridge) return
-
-    try {
-      const remoteProxy = await bridge.getRemoteProxyPromise()
-      const data = await remoteProxy.getData()
-      console.log('Data from child:', data)
-
-      // Call another method
-      const result = await remoteProxy.calculate(10, 5)
-      console.log('Calculation result:', result)
-    } catch (error) {
-      console.error('Error calling child method:', error)
+    if (remoteProxy.state === 'hasData') {
+      const result = await remoteProxy.data.subtract(10, 3)
+      console.log('Result:', result) // 7
     }
   }
 
   return (
     <div>
-      <div>Status: {connectionStatus}</div>
-      <button onClick={initializeConnection} disabled={connectionStatus === 'connecting'}>
-        Connect to Child
-      </button>
-      <button onClick={callChildMethod} disabled={connectionStatus !== 'connected'}>
-        Call Child Methods
-      </button>
-
-      <iframe
-        ref={iframeRef}
-        src="https://child-domain.com/child.html"
-        onLoad={() => {
-          // Auto-connect when iframe loads
-          setTimeout(initializeConnection, 100)
-        }}
-      />
+      <iframe ref={handleIframeRef} src="/child.html" />
+      <button onClick={callChildMethod}>Call Child Method</button>
     </div>
   )
 }
 ```
 
-### Child Window (Iframe Content)
+### Child (Iframe) Application
 
 ```tsx
-import React, { useEffect, useState } from 'react'
-import { connectToParent, type RemoteProxy, type ChildConnectionConfig } from 'jotai-iframe-bridge'
+import { createChildBridge, makeChildBridgeHooks } from 'jotai-iframe-bridge'
 
-// Same interfaces as parent (typically shared in a types file)
-interface ParentMethods {
-  notifyParent: (message: string) => void
-  getParentData: () => Promise<string>
+// Create bridge
+const bridge = createChildBridge<ChildMethods, ParentMethods>({
+  parentOrigin: '*',
+  methods: {
+    subtract: async (a, b) => a - b
+  }
+})
+
+// Create provider and hooks
+const { ChildBridgeProvider, hooks } = makeChildBridgeHooks(bridge)
+const { useChildBridge, useRemoteProxy } = hooks
+
+function App() {
+  return (
+    <ChildBridgeProvider>
+      <MyComponent />
+    </ChildBridgeProvider>
+  )
 }
 
-interface ChildMethods {
-  getData: () => Promise<string>
-  updateValue: (value: string) => Promise<void>
-  calculate: (a: number, b: number) => Promise<number>
-}
-
-export const ChildComponent: React.FC = () => {
-  const [parentProxy, setParentProxy] = useState<RemoteProxy<ParentMethods> | null>(null)
-  const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected')
-  const [currentValue, setCurrentValue] = useState<string>('Initial value')
+function MyComponent() {
+  const bridge = useChildBridge()
+  const remoteProxy = useRemoteProxy()
 
   useEffect(() => {
-    setConnectionStatus('connecting')
+    bridge.connect()
+  }, [bridge])
 
-    // Connect to parent using the child-specific function
-    connectToParent<ChildMethods, ParentMethods>({
-      parentOrigin: 'https://parent-domain.com', // Configure for your domain
-      methods: {
-        getData: async () => {
-          return `Child data: ${currentValue} (${new Date().toLocaleTimeString()})`
-        },
-        updateValue: async (value: string) => {
-          setCurrentValue(value)
-          console.log('Value updated to:', value)
-        },
-        calculate: async (a: number, b: number) => {
-          return a + b
-        }
-      },
-      timeout: 5000,
-      log: (...args) => console.log('Child Bridge:', ...args)
-    })
-      .then((proxy) => {
-        console.log('Child connection established!')
-        setParentProxy(proxy)
-        setConnectionStatus('connected')
-      })
-      .catch((error) => {
-        console.error('Child connection failed:', error)
-        setConnectionStatus('disconnected')
-      })
-  }, [])
-
-  const notifyParent = async () => {
-    if (!parentProxy) return
-
-    try {
-      await parentProxy.notifyParent('Hello from child iframe!')
-    } catch (error) {
-      console.error('Error notifying parent:', error)
-    }
-  }
-
-  const getParentData = async () => {
-    if (!parentProxy) return
-
-    try {
-      const data = await parentProxy.getParentData()
-      console.log('Received from parent:', data)
-    } catch (error) {
-      console.error('Error getting parent data:', error)
+  const callParentMethod = async () => {
+    if (remoteProxy.state === 'hasData') {
+      const result = await remoteProxy.data.add(5, 3)
+      console.log('Result:', result) // 8
     }
   }
 
   return (
-    <div>
-      <h2>Child Iframe Content</h2>
-      <div>Status: {connectionStatus}</div>
-      <div>Current Value: {currentValue}</div>
-
-      {connectionStatus === 'connected' && (
-        <div>
-      <button onClick={notifyParent}>Notify Parent</button>
-          <button onClick={getParentData}>Get Parent Data</button>
-        </div>
-      )}
-    </div>
+    <button onClick={callParentMethod}>Call Parent Method</button>
   )
 }
 ```
 
 ## API Reference
 
-### `createIframeBridge<TLocalMethods, TRemoteMethods>(config)`
+### `createParentBridge<TLocalMethods, TRemoteMethods>(config, store?)`
 
-Creates an iframe bridge for the parent window.
-
-**Parameters:**
-- `config: ConnectionConfig<TLocalMethods>` - Configuration object
-
-**Returns:** `IframeBridge<TLocalMethods, TRemoteMethods>`
-
-### `connectToParent<TLocalMethods, TParentMethods>(config)`
-
-Connects to the parent window from within an iframe.
+Creates a parent bridge for iframe communication.
 
 **Parameters:**
-- `config: ChildConnectionConfig<TLocalMethods>` - Child configuration object
+- `config: ConnectionConfig<TLocalMethods>` - Bridge configuration
+- `store?: Store` - Optional Jotai store
 
-**Returns:** `Promise<RemoteProxy<TParentMethods>>`
+**Returns:** `ParentBridge<TLocalMethods, TRemoteMethods>`
 
-### ConnectionConfig
+### `createChildBridge<TLocalMethods, TRemoteMethods>(config, store?)`
 
-```typescript
-interface ConnectionConfig<TLocalMethods extends Methods = Methods> {
-  allowedOrigins: string[]        // Array of allowed origins
-  methods?: TLocalMethods         // Methods to expose to remote
-  timeout?: number               // Timeout in milliseconds (default: 10000)
-  log?: (...args: unknown[]) => void  // Optional logging function
-}
-```
+Creates a child bridge for iframe communication.
 
-### ChildConnectionConfig
+**Parameters:**
+- `config: ChildConnectionConfig<TLocalMethods>` - Bridge configuration
+- `store?: Store` - Optional Jotai store
 
-```typescript
-interface ChildConnectionConfig<TLocalMethods extends Methods = Methods> {
-  parentOrigin: string | string[]  // Allowed parent origin(s)
-  methods?: TLocalMethods         // Methods to expose to parent
-  timeout?: number               // Timeout in milliseconds (default: 10000)
-  log?: (...args: unknown[]) => void  // Optional logging function
-}
-```
+**Returns:** `ChildBridge<TLocalMethods, TRemoteMethods>`
 
-### IframeBridge Interface
+### Factory Functions
 
-```typescript
-interface IframeBridge<TLocalMethods, TRemoteMethods> {
-  getMessenger(): WindowMessenger | null
-setRemoteWindow(window: Window): void
-  getConnectionPromise(): Promise<Connection<TRemoteMethods>>
-reinitialize(): void
-getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
-isInitialized(): boolean
-  destroy(): void
-retry(): void
-}
-```
+#### `makeParentBridgeHooks(bridge)`
 
-### RemoteProxy
+Creates React provider and hooks for ParentBridge.
 
-A proxy object that makes remote method calls transparent. When you call a method on the proxy, it sends a message to the remote window and returns a Promise that resolves with the result.
-
-```typescript
-type RemoteProxy<T extends Methods> = {
-  [K in keyof T]: T[K] extends (...args: infer P) => infer R
-    ? (...args: P) => Promise<R>
-    : never
-}
-```
-
-## Security Considerations
-
-1. **Always specify exact origins** in production instead of using `'*'`
-2. **Validate input** in your exposed methods
-3. **Use HTTPS** for production deployments
-4. **Sanitize data** before processing method arguments
-5. **Implement rate limiting** for method calls if needed
-
-## Error Handling
-
-The library handles various error scenarios:
-
-- **Connection timeouts**: Configurable timeout for handshake
-- **Method call timeouts**: Individual timeouts for method calls
-- **Origin validation**: Automatic rejection of unauthorized origins
-- **Connection destruction**: Proper cleanup when connection is destroyed
-- **Method not found**: Error when calling non-existent remote methods
-
-## Advanced Usage
-
-### Custom Error Handling
-
-```typescript
-const config: ConnectionConfig<MyMethods> = {
-  allowedOrigins: ['https://trusted-domain.com'],
-  methods: {
-    riskyMethod: async (data: unknown) => {
-      try {
-        // Your logic here
-        return await processData(data)
-      } catch (error) {
-        // Errors are automatically serialized and sent back
-        throw new Error(`Processing failed: ${error.message}`)
-      }
-    }
+**Returns:**
+```tsx
+{
+  ParentBridgeProvider: React.Component,
+  hooks: {
+    useParentBridge: () => ParentBridge,
+    useRemoteProxy: () => Loadable<RemoteProxy>,
+    useConnection: () => Loadable<Connection>,
+    useChildReady: () => boolean
   }
 }
 ```
 
-### Reconnection Logic
+#### `makeChildBridgeHooks(bridge)`
 
-   ```typescript
-// In parent component
-const handleRetry = () => {
-  if (bridge) {
-    bridge.retry() // Attempts to reconnect
+Creates React provider and hooks for ChildBridge.
 
-    bridge.getConnectionPromise()
-      .then(() => setStatus('connected'))
-      .catch(() => setStatus('failed'))
-     }
-   }
-   ```
-
-### Nested Method Calls
-
-   ```typescript
-interface NestedMethods {
-  user: {
-    profile: {
-      getName: () => Promise<string>
-      setName: (name: string) => Promise<void>
-    }
+**Returns:**
+```tsx
+{
+  ChildBridgeProvider: React.Component,
+  hooks: {
+    useChildBridge: () => ChildBridge,
+    useRemoteProxy: () => Loadable<RemoteProxy>,
+    useConnection: () => Loadable<Connection>
   }
 }
-
-// Usage
-const name = await remoteProxy.user.profile.getName()
-await remoteProxy.user.profile.setName('New Name')
 ```
 
-## Protocol Details
+## Configuration
 
-The library uses a simple message-based protocol:
+### `ConnectionConfig<TLocalMethods>`
 
-1. **SYN Message**: Parent sends to initiate handshake
-2. **ACK Message**: Child responds to confirm connection
-3. **CALL Message**: Either side can call remote methods
-4. **REPLY Message**: Response to method calls
-5. **DESTROY Message**: Clean shutdown notification
-
-All messages include a namespace (`'jotai-iframe-bridge'`) for isolation and security.
-
-## Migration from Other Libraries
-
-### From Penpal
-
-The API is similar to Penpal but simplified:
-
-```typescript
-// Penpal
-const connection = connectToChild({ iframe })
-const child = await connection.promise
-
-// jotai-iframe-bridge
-const bridge = createIframeBridge(config)
-bridge.setRemoteWindow(iframe.contentWindow)
-const child = await bridge.getRemoteProxyPromise()
+```tsx
+interface ConnectionConfig<TLocalMethods> {
+  allowedOrigins: string[]      // Origins that can connect
+  methods?: TLocalMethods       // Methods to expose
+  timeout?: number             // Connection timeout (default: 15000ms)
+  log?: (...args: any[]) => void // Custom logger
+}
 ```
 
-### From PostMessage
+### `ChildConnectionConfig<TLocalMethods>`
 
-Replace manual postMessage handling:
-
-```typescript
-// Old postMessage approach
-window.postMessage({ type: 'GET_DATA' }, '*')
-window.addEventListener('message', (event) => {
-  if (event.data.type === 'DATA_RESPONSE') {
-    // Handle response
-  }
-})
-
-// jotai-iframe-bridge
-const data = await remoteProxy.getData()
+```tsx
+interface ChildConnectionConfig<TLocalMethods> {
+  parentOrigin: string | string[]  // Parent origin(s)
+  methods?: TLocalMethods          // Methods to expose
+  timeout?: number                // Connection timeout
+  log?: (...args: any[]) => void  // Custom logger
+}
 ```
+
+## Why Three-Way Handshake?
+
+The three-way handshake solves several critical issues that simpler protocols cannot handle:
+
+### Problem with Two-Way Handshake
+
+```
+❌ Simple approach (doesn't work):
+Parent: sends SYN → Child: sends ACK → Connection?
+```
+
+**Issues:**
+- What if child isn't ready when parent sends SYN?
+- What if both sides send SYN simultaneously?
+- How do we handle iframe reloads?
+
+### Problem with Both Sending ACK
+
+```
+❌ Race condition (our original issue):
+Parent: sends SYN → receives SYN from child → sends ACK → waits for ACK
+Child:  sends SYN → receives SYN from parent → sends ACK → waits for ACK
+Result: Both waiting forever!
+```
+
+### Solution: Leadership + Confirmation
+
+```
+✅ Three-way handshake (reliable):
+1. Both send SYN (either can initiate)
+2. Leader determined by ID comparison (breaks tie)
+3. Leader sends ACK1, follower responds with ACK2
+4. Both sides confirm bidirectional communication
+```
+
+This protocol is battle-tested and handles all edge cases including:
+- Race conditions during simultaneous connection attempts
+- Iframe reloads and reconnection scenarios
+- Timing issues where one side isn't ready
+- Network reliability confirmation
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.

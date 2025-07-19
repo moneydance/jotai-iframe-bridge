@@ -44,8 +44,13 @@ export type SynMessage = MessageBase & {
   participantId: string
 }
 
-export type AckMessage = MessageBase & {
-  type: 'ACK'
+export type Ack1Message = MessageBase & {
+  type: 'ACK1'
+  methodPaths?: string[]
+}
+
+export type Ack2Message = MessageBase & {
+  type: 'ACK2'
 }
 
 export type CallMessage = MessageBase & {
@@ -73,7 +78,13 @@ export type DestroyMessage = MessageBase & {
   type: 'DESTROY'
 }
 
-export type Message = SynMessage | AckMessage | CallMessage | ReplyMessage | DestroyMessage
+export type Message =
+  | SynMessage
+  | Ack1Message
+  | Ack2Message
+  | CallMessage
+  | ReplyMessage
+  | DestroyMessage
 
 // ==================== Utility Functions ====================
 
@@ -99,8 +110,12 @@ function isSynMessage(message: Message): message is SynMessage {
   return message.type === 'SYN'
 }
 
-function isAckMessage(message: Message): message is AckMessage {
-  return message.type === 'ACK'
+function isAck1Message(message: Message): message is Ack1Message {
+  return message.type === 'ACK1'
+}
+
+function isAck2Message(message: Message): message is Ack2Message {
+  return message.type === 'ACK2'
 }
 
 function isCallMessage(message: Message): message is CallMessage {
@@ -220,7 +235,7 @@ class WindowMessengerImpl implements WindowMessenger {
     }
 
     // Set concrete remote origin for both SYN and ACK messages
-    if (isSynMessage(data) || isAckMessage(data)) {
+    if (isSynMessage(data) || isAck1Message(data) || isAck2Message(data)) {
       this.concreteRemoteOrigin = origin
     }
 
@@ -585,32 +600,113 @@ function createReactiveIframeBridge<
 
       // Set up handshake message handler
       const handleHandshakeMessage = (message: Message) => {
-        if (handshakeCompleted) return
+        config.log?.('📨 Handshake handler received message:', message.type, message)
 
-        if (isAckMessage(message)) {
+        if (handshakeCompleted) {
+          config.log?.('⚠️ Handshake already completed, ignoring message')
+          return
+        }
+
+        if (isSynMessage(message)) {
+          config.log?.('Received SYN message from participant:', message.participantId)
+
+          // Send another SYN in case the other participant wasn't ready for our first one
+          try {
+            messenger.sendMessage(synMessage)
+            config.log?.('Sent additional SYN message')
+          } catch (error) {
+            config.log?.('Failed to send additional SYN:', error)
+          }
+
+          // Determine leadership by comparing participant IDs (lexicographical)
+          const isHandshakeLeader = participantId > message.participantId
+          config.log?.(
+            `Leadership check: ${participantId} > ${message.participantId} = ${isHandshakeLeader}`
+          )
+
+          if (isHandshakeLeader) {
+            // We are the leader, send ACK1
+            const ack1Message: Ack1Message = {
+              namespace: NAMESPACE,
+              type: 'ACK1',
+            }
+
+            try {
+              config.log?.('Sending ACK1 message as leader', ack1Message)
+              messenger.sendMessage(ack1Message)
+            } catch (error) {
+              config.log?.('Failed to send ACK1:', error)
+              get
+                .peek(connectionDeferredAtom)
+                .reject(new Error(`Failed to send ACK1: ${(error as Error).message}`))
+            }
+          }
+          // If not leader, wait for ACK1 from the leader
+        } else if (isAck1Message(message)) {
+          config.log?.('Received ACK1 message, sending ACK2 response')
+
+          // Respond with ACK2
+          const ack2Message: Ack2Message = {
+            namespace: NAMESPACE,
+            type: 'ACK2',
+          }
+
+          try {
+            messenger.sendMessage(ack2Message)
+            config.log?.('Sent ACK2 response')
+          } catch (error) {
+            config.log?.('Failed to send ACK2:', error)
+            get
+              .peek(connectionDeferredAtom)
+              .reject(new Error(`Failed to send ACK2: ${(error as Error).message}`))
+            return
+          }
+
+          // Establish connection (follower establishes after sending ACK2)
           handshakeCompleted = true
           messenger.removeMessageHandler(handleHandshakeMessage)
 
-          // Create remote proxy
           const { remoteProxy, destroy } = connectRemoteProxy<TRemoteMethods>(
             messenger,
-            undefined, // channel
+            undefined,
             config.log,
             config.timeout
           )
 
-          // Create connection
           const connection = new ConnectionImpl<TRemoteMethods>(
             Promise.resolve(remoteProxy),
             destroy
           )
 
-          // Resolve the connection promise
           get.peek(connectionDeferredAtom).resolve(connection)
-          config.log?.('Connection established successfully')
+          config.log?.('Connection established successfully (follower)')
+        } else if (isAck2Message(message)) {
+          config.log?.('Received ACK2 message, establishing connection')
+
+          // Establish connection (leader establishes after receiving ACK2)
+          handshakeCompleted = true
+          messenger.removeMessageHandler(handleHandshakeMessage)
+
+          const { remoteProxy, destroy } = connectRemoteProxy<TRemoteMethods>(
+            messenger,
+            undefined,
+            config.log,
+            config.timeout
+          )
+
+          const connection = new ConnectionImpl<TRemoteMethods>(
+            Promise.resolve(remoteProxy),
+            destroy
+          )
+
+          get.peek(connectionDeferredAtom).resolve(connection)
+          config.log?.('Connection established successfully (leader)')
+        } else {
+          config.log?.('📨 Ignoring non-handshake message:', message.type)
         }
       }
 
+      config.log?.('🔗 Adding handshake message handler')
       messenger.addMessageHandler(handleHandshakeMessage)
 
       // Send SYN message
@@ -705,148 +801,579 @@ export function createIframeBridge<
   return createReactiveIframeBridge<TLocalMethods, TRemoteMethods>(config, store)
 }
 
-// ==================== Child/Remote Side ====================
+// ==================== New Parent/Child Pattern ====================
 
-export function connectToParent<
+export interface ParentBridge<
+  _TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+> {
+  id: string
+  init(iframeElement: HTMLIFrameElement): void
+  connect(): void
+  isInitialized(): boolean
+  getConnectionPromise(): Promise<Connection<TRemoteMethods>>
+  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
+  getConnectionAtom(): ReturnType<typeof loadable<Connection<TRemoteMethods>>>
+  getRemoteProxyAtom(): ReturnType<typeof loadable<RemoteProxy<TRemoteMethods>>>
+  getChildReadyAtom(): ReturnType<typeof atom<boolean>>
+  getDebugState(): {
+    hasIframeElement: boolean
+    iframeReady: boolean
+    connectionRequested: boolean
+    connectionState: string
+  }
+  destroy(): void
+  cleanup(): void
+  retry(): void
+}
+
+export interface ChildBridge<
+  _TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+> {
+  id: string
+  connect(): void
+  isInitialized(): boolean
+  getConnectionPromise(): Promise<Connection<TRemoteMethods>>
+  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
+  getConnectionAtom(): ReturnType<typeof loadable<Connection<TRemoteMethods>>>
+  getRemoteProxyAtom(): ReturnType<typeof loadable<RemoteProxy<TRemoteMethods>>>
+  destroy(): void
+  cleanup(): void
+  retry(): void
+}
+
+export function createParentBridge<
   TLocalMethods extends Methods = Methods,
-  TParentMethods extends Methods = Methods,
->(config: ChildConnectionConfig<TLocalMethods>): Promise<RemoteProxy<TParentMethods>> {
-  const parentOrigins = Array.isArray(config.parentOrigin)
-    ? config.parentOrigin
-    : [config.parentOrigin]
+  TRemoteMethods extends Methods = Methods,
+>(
+  config: ConnectionConfig<TLocalMethods>,
+  store: Store = getDefaultStore()
+): ParentBridge<TLocalMethods, TRemoteMethods> {
+  // Generate unique ID for this bridge instance
+  const bridgeId = generateId()
+  config.log?.(`🆔 Creating ParentBridge with ID: ${bridgeId}`)
 
-  const messenger = new WindowMessengerImpl(window.parent, parentOrigins, config.log)
+  // Internal atoms for managing iframe state
+  const iframeElementAtom = atom<HTMLIFrameElement | null>(null)
+  const iframeReadyAtom = atom<boolean>(false)
+  const connectionRequestedAtom = atom<boolean>(false)
 
-  // Set up call handler for incoming method calls
-  let callHandlerDestroy: (() => void) | null = null
-  if (config.methods) {
-    callHandlerDestroy = connectCallHandler(
-      messenger,
-      config.methods,
-      undefined, // channel
+  // Observe iframe element changes and set up load listeners
+  observe((get, set) => {
+    const iframeElement = get(iframeElementAtom)
+
+    config.log?.(
+      '🔍 Observer: iframeElement changed:',
+      iframeElement ? 'HTMLIFrameElement set' : 'null'
+    )
+
+    if (!iframeElement) {
+      config.log?.('🔍 Observer: Setting iframeReadyAtom to false (no iframe element)')
+      set(iframeReadyAtom, false)
+      return
+    }
+
+    const handleLoad = () => {
+      config.log?.('🎉 Load event fired! Setting iframeReadyAtom to true')
+      set(iframeReadyAtom, true)
+      config.log?.('Iframe loaded and ready for connection')
+    }
+
+    // Never access contentDocument - just use load event listener
+    config.log?.('🔧 Observer: Adding load event listener to iframe')
+    iframeElement.addEventListener('load', handleLoad, { once: true })
+
+    // Return cleanup function to remove listener if iframe element changes
+    return () => {
+      config.log?.('🧹 Observer cleanup: Removing load event listener')
+      iframeElement.removeEventListener('load', handleLoad)
+    }
+  }, store)
+
+  // Derived atom - only create messenger when both iframe element is set AND iframe is ready AND connection is requested
+  const messengerAtom = atom<WindowMessenger | null>((get) => {
+    const iframeElement = get(iframeElementAtom)
+    const iframeReady = get(iframeReadyAtom)
+    const connectionRequested = get(connectionRequestedAtom)
+
+    config.log?.('📊 Messenger check:', {
+      hasIframeElement: !!iframeElement,
+      hasContentWindow: !!iframeElement?.contentWindow,
+      iframeReady,
+      connectionRequested,
+    })
+
+    if (!iframeElement?.contentWindow || !iframeReady || !connectionRequested) {
+      config.log?.('❌ Messenger not ready - returning null')
+      return null
+    }
+
+    config.log?.('🎯 Creating WindowMessenger - all conditions met!')
+    const messenger = new WindowMessengerImpl(
+      iframeElement.contentWindow,
+      config.allowedOrigins,
       config.log
     )
-  }
+    return messenger
+  })
 
-  return new Promise((resolve, reject) => {
-    let handshakeCompleted = false
-    const handshakeTimeout = config.timeout || 10000
+  // Connection state atoms
+  const connectionDeferredAtom = atom(createDeferred<Connection<TRemoteMethods>>())
 
-    // Set up handshake message handler
-    const handleHandshakeMessage = (message: Message) => {
-      if (handshakeCompleted) return
+  // Lazy connection promise - only starts when connectionRequestedAtom is true
+  const connectionPromiseAtom = atom(async (get) => {
+    const connectionRequested = get(connectionRequestedAtom)
+    if (!connectionRequested) {
+      // Return a never-resolving promise for pending state
+      return new Promise<Connection<TRemoteMethods>>(() => {})
+    }
+    return get(connectionDeferredAtom).promise
+  })
 
-      if (isSynMessage(message)) {
-        handshakeCompleted = true
-        messenger.removeMessageHandler(handleHandshakeMessage)
+  const remoteProxyPromiseAtom = atom(async (get) => {
+    const connection = await get(connectionPromiseAtom)
+    return connection.promise
+  })
 
-        // Send ACK message
-        const ackMessage: AckMessage = {
-          namespace: NAMESPACE,
-          type: 'ACK',
+  // Loadable atoms for React integration
+  const connectionAtom = loadable(connectionPromiseAtom)
+  const remoteProxyAtom = loadable(remoteProxyPromiseAtom)
+
+  // Effect to manage connection lifecycle based on messenger changes
+  const updateConnectionOnMessengerChange = () => {
+    return observe((get: any, set: any) => {
+      const messenger = get(messengerAtom)
+
+      if (!messenger) {
+        // Reset connection when messenger is null
+        const connectionDeferred = get.peek(connectionDeferredAtom)
+        if (connectionDeferred.status !== 'pending') {
+          set(connectionDeferredAtom, createDeferred<Connection<TRemoteMethods>>())
+        }
+        return
+      }
+
+      // Start handshake process (same as existing implementation)
+      const participantId = generateId()
+      const synMessage: SynMessage = {
+        namespace: NAMESPACE,
+        type: 'SYN',
+        participantId,
+      }
+
+      let handshakeCompleted = false
+      const handshakeTimeout = config.timeout || 10000
+      let callHandlerDestroy: (() => void) | null = null
+
+      // Set up call handler for incoming method calls
+      if (config.methods) {
+        callHandlerDestroy = connectCallHandler(
+          messenger,
+          config.methods,
+          undefined, // channel
+          config.log
+        )
+      }
+
+      // Set up handshake message handler
+      const handleHandshakeMessage = (message: Message) => {
+        config.log?.('📨 Handshake handler received message:', message.type, message)
+
+        if (handshakeCompleted) {
+          config.log?.('⚠️ Handshake already completed, ignoring message')
+          return
         }
 
-        try {
-          config.log?.('Sending ACK message', ackMessage)
-          messenger.sendMessage(ackMessage)
+        if (isSynMessage(message)) {
+          config.log?.('Received SYN message from participant:', message.participantId)
 
-          // Create remote proxy
-          const { remoteProxy } = connectRemoteProxy<TParentMethods>(
+          // Send another SYN in case the other participant wasn't ready for our first one
+          try {
+            messenger.sendMessage(synMessage)
+            config.log?.('Sent additional SYN message')
+          } catch (error) {
+            config.log?.('Failed to send additional SYN:', error)
+          }
+
+          // Determine leadership by comparing participant IDs (lexicographical)
+          const isHandshakeLeader = participantId > message.participantId
+          config.log?.(
+            `Leadership check: ${participantId} > ${message.participantId} = ${isHandshakeLeader}`
+          )
+
+          if (isHandshakeLeader) {
+            // We are the leader, send ACK1
+            const ack1Message: Ack1Message = {
+              namespace: NAMESPACE,
+              type: 'ACK1',
+            }
+
+            try {
+              config.log?.('Sending ACK1 message as leader', ack1Message)
+              messenger.sendMessage(ack1Message)
+            } catch (error) {
+              config.log?.('Failed to send ACK1:', error)
+              get
+                .peek(connectionDeferredAtom)
+                .reject(new Error(`Failed to send ACK1: ${(error as Error).message}`))
+            }
+          }
+          // If not leader, wait for ACK1 from the leader
+        } else if (isAck1Message(message)) {
+          config.log?.('Received ACK1 message, sending ACK2 response')
+
+          // Respond with ACK2
+          const ack2Message: Ack2Message = {
+            namespace: NAMESPACE,
+            type: 'ACK2',
+          }
+
+          try {
+            messenger.sendMessage(ack2Message)
+            config.log?.('Sent ACK2 response')
+          } catch (error) {
+            config.log?.('Failed to send ACK2:', error)
+            get
+              .peek(connectionDeferredAtom)
+              .reject(new Error(`Failed to send ACK2: ${(error as Error).message}`))
+            return
+          }
+
+          // Establish connection (follower establishes after sending ACK2)
+          handshakeCompleted = true
+          messenger.removeMessageHandler(handleHandshakeMessage)
+
+          const { remoteProxy, destroy } = connectRemoteProxy<TRemoteMethods>(
             messenger,
-            undefined, // channel
+            undefined,
             config.log,
             config.timeout
           )
 
-          resolve(remoteProxy)
-          config.log?.('Child connection established successfully')
-        } catch (error) {
-          reject(new Error(`Failed to send ACK: ${(error as Error).message}`))
+          const connection = new ConnectionImpl<TRemoteMethods>(
+            Promise.resolve(remoteProxy),
+            destroy
+          )
+
+          get.peek(connectionDeferredAtom).resolve(connection)
+          config.log?.('Connection established successfully (follower)')
+        } else if (isAck2Message(message)) {
+          config.log?.('Received ACK2 message, establishing connection')
+
+          // Establish connection (leader establishes after receiving ACK2)
+          handshakeCompleted = true
+          messenger.removeMessageHandler(handleHandshakeMessage)
+
+          const { remoteProxy, destroy } = connectRemoteProxy<TRemoteMethods>(
+            messenger,
+            undefined,
+            config.log,
+            config.timeout
+          )
+
+          const connection = new ConnectionImpl<TRemoteMethods>(
+            Promise.resolve(remoteProxy),
+            destroy
+          )
+
+          get.peek(connectionDeferredAtom).resolve(connection)
+          config.log?.('Connection established successfully (leader)')
+        } else {
+          config.log?.('📨 Ignoring non-handshake message:', message.type)
         }
       }
-    }
 
-    messenger.addMessageHandler(handleHandshakeMessage)
+      messenger.addMessageHandler(handleHandshakeMessage)
 
-    // Set up timeout
-    setTimeout(() => {
-      if (!handshakeCompleted) {
-        messenger.removeMessageHandler(handleHandshakeMessage)
-        if (callHandlerDestroy) callHandlerDestroy()
-        messenger.destroy()
-        reject(new Error(`Child connection timeout after ${handshakeTimeout}ms`))
+      // Send SYN message
+      try {
+        config.log?.('Sending SYN message', synMessage)
+        messenger.sendMessage(synMessage)
+      } catch (error) {
+        get
+          .peek(connectionDeferredAtom)
+          .reject(new Error(`Failed to send SYN: ${(error as Error).message}`))
+        return
       }
-    }, handshakeTimeout)
 
-    config.log?.('Child waiting for SYN message from parent')
-  })
+      // Set up timeout
+      const timeoutId = setTimeout(() => {
+        if (!handshakeCompleted) {
+          messenger.removeMessageHandler(handleHandshakeMessage)
+          get
+            .peek(connectionDeferredAtom)
+            .reject(new Error(`Connection timeout after ${handshakeTimeout}ms`))
+        }
+      }, handshakeTimeout)
+
+      // Return cleanup function
+      return () => {
+        clearTimeout(timeoutId)
+        messenger.removeMessageHandler(handleHandshakeMessage)
+        if (callHandlerDestroy) {
+          callHandlerDestroy()
+        }
+        messenger.destroy()
+      }
+    }, store)
+  }
+
+  const unsubscribeFromMessengerChange = updateConnectionOnMessengerChange()
+
+  return {
+    id: bridgeId,
+    init(iframeElement: HTMLIFrameElement) {
+      config.log?.(
+        `🚀 Bridge ${bridgeId} init() called with iframe element:`,
+        iframeElement.tagName,
+        iframeElement.src
+      )
+      store.set(iframeElementAtom, iframeElement)
+      config.log?.(`✅ Bridge ${bridgeId} init() complete - iframeElementAtom set`)
+    },
+
+    connect() {
+      config.log?.(`🔗 Bridge ${bridgeId} connect() called`)
+      store.set(connectionRequestedAtom, true)
+      config.log?.(`Parent bridge ${bridgeId} connect() called, waiting for iframe ready state`)
+    },
+
+    isInitialized(): boolean {
+      return store.get(connectionAtom).state === 'hasData'
+    },
+
+    getConnectionPromise(): Promise<Connection<TRemoteMethods>> {
+      return store.get(connectionPromiseAtom)
+    },
+
+    getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> {
+      return store.get(remoteProxyPromiseAtom)
+    },
+
+    getConnectionAtom(): LoadableAtom<Connection<TRemoteMethods>> {
+      return connectionAtom
+    },
+
+    getRemoteProxyAtom(): LoadableAtom<RemoteProxy<TRemoteMethods>> {
+      return remoteProxyAtom
+    },
+
+    getChildReadyAtom(): ReturnType<typeof atom<boolean>> {
+      return iframeReadyAtom
+    },
+
+    // Debug method to check current state
+    getDebugState() {
+      const currentState = {
+        hasIframeElement: !!store.get(iframeElementAtom),
+        iframeReady: store.get(iframeReadyAtom),
+        connectionRequested: store.get(connectionRequestedAtom),
+        connectionState: store.get(connectionAtom).state,
+      }
+      config.log?.('🐛 Debug state:', currentState)
+      return currentState
+    },
+
+    retry(): void {
+      // Reset connection state and try again
+      store.set(connectionRequestedAtom, false)
+      store.set(connectionDeferredAtom, createDeferred<Connection<TRemoteMethods>>())
+      store.set(connectionRequestedAtom, true)
+    },
+
+    destroy(): void {
+      store.set(iframeElementAtom, null)
+      store.set(iframeReadyAtom, false)
+      store.set(connectionRequestedAtom, false)
+      unsubscribeFromMessengerChange()
+    },
+
+    cleanup(): void {
+      unsubscribeFromMessengerChange()
+    },
+  }
+}
+
+export function createChildBridge<
+  TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+>(
+  config: ChildConnectionConfig<TLocalMethods>,
+  store?: Store
+): ChildBridge<TLocalMethods, TRemoteMethods> {
+  // Generate unique ID for this bridge instance
+  const bridgeId = generateId()
+  config.log?.(`🆔 Creating ChildBridge with ID: ${bridgeId}`)
+
+  // Convert ChildConnectionConfig to ConnectionConfig
+  const parentOrigins = Array.isArray(config.parentOrigin)
+    ? config.parentOrigin
+    : [config.parentOrigin]
+
+  const bridgeConfig: ConnectionConfig<TLocalMethods> = {
+    allowedOrigins: parentOrigins,
+    ...(config.methods !== undefined && { methods: config.methods }),
+    ...(config.timeout !== undefined && { timeout: config.timeout }),
+    ...(config.log !== undefined && { log: config.log }),
+  }
+
+  const internalBridge = createReactiveIframeBridge<TLocalMethods, TRemoteMethods>(
+    bridgeConfig,
+    store
+  )
+
+  return {
+    id: bridgeId,
+    connect: () => {
+      // Child initiates connection to parent immediately
+      internalBridge.init(window.parent)
+      config.log?.(`Child bridge ${bridgeId} connect() called, connecting to parent`)
+    },
+    isInitialized: () => internalBridge.isInitialized(),
+    getConnectionPromise: () => internalBridge.getConnectionPromise(),
+    getRemoteProxyPromise: () => internalBridge.getRemoteProxyPromise(),
+    getConnectionAtom: () => internalBridge.getConnectionAtom(),
+    getRemoteProxyAtom: () => internalBridge.getRemoteProxyAtom(),
+    destroy: () => internalBridge.destroy(),
+    cleanup: () => internalBridge.cleanup(),
+    retry: () => internalBridge.retry(),
+  }
 }
 
 // ==================== React Integration ====================
 
-interface IframeBridgeProviderProps {
+export interface IframeBridgeProviderProps {
   children: ReactNode
 }
 
-export function makeIframeBridgeHooks<
+export interface ParentBridgeProviderProps<
   TLocalMethods extends Methods = Methods,
   TRemoteMethods extends Methods = Methods,
->(bridge: IframeBridge<TLocalMethods, TRemoteMethods>) {
-  interface IframeBridgeContextValue {
-    bridge: IframeBridge<TLocalMethods, TRemoteMethods>
+> extends IframeBridgeProviderProps {
+  bridge?: ParentBridge<TLocalMethods, TRemoteMethods>
+}
+
+export interface ChildBridgeProviderProps<
+  TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+> extends IframeBridgeProviderProps {
+  bridge?: ChildBridge<TLocalMethods, TRemoteMethods>
+}
+
+export function makeParentBridgeHooks<
+  TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+>(defaultBridge: ParentBridge<TLocalMethods, TRemoteMethods>) {
+  interface ParentBridgeContextValue {
+    bridge: ParentBridge<TLocalMethods, TRemoteMethods>
   }
 
-  const IframeBridgeContext = createContext<IframeBridgeContextValue | null>(null)
+  const ParentBridgeContext = createContext<ParentBridgeContextValue | null>(null)
 
-  const IframeBridgeProvider = ({ children }: IframeBridgeProviderProps) => {
-    const contextValue: IframeBridgeContextValue = {
+  const ParentBridgeProvider = ({
+    children,
+    bridge = defaultBridge,
+  }: ParentBridgeProviderProps<TLocalMethods, TRemoteMethods>) => {
+    const contextValue: ParentBridgeContextValue = {
       bridge,
     }
 
     return (
-      <IframeBridgeContext.Provider value={contextValue}>{children}</IframeBridgeContext.Provider>
+      <ParentBridgeContext.Provider value={contextValue}>{children}</ParentBridgeContext.Provider>
     )
   }
 
-  function useIframeBridge(): IframeBridge<TLocalMethods, TRemoteMethods> {
-    const context = useContext(IframeBridgeContext)
+  function useParentBridge(): ParentBridge<TLocalMethods, TRemoteMethods> {
+    const context = useContext(ParentBridgeContext)
 
     if (!context) {
-      throw new Error('useIframeBridge must be used within an IframeBridgeProvider')
+      throw new Error('useParentBridge must be used within a ParentBridgeProvider')
     }
 
     return context.bridge
   }
 
   function useRemoteProxy() {
-    const bridge = useIframeBridge()
+    const bridge = useParentBridge()
     const remoteProxyAtom = bridge.getRemoteProxyAtom()
     return useAtomValue(remoteProxyAtom)
   }
 
   function useConnection() {
-    const bridge = useIframeBridge()
+    const bridge = useParentBridge()
+    const connectionAtom = bridge.getConnectionAtom()
+    return useAtomValue(connectionAtom)
+  }
+
+  function useChildReady() {
+    const bridge = useParentBridge()
+    const childReadyAtom = bridge.getChildReadyAtom()
+    return useAtomValue(childReadyAtom)
+  }
+
+  return {
+    ParentBridgeProvider,
+    hooks: {
+      useParentBridge,
+      useRemoteProxy,
+      useConnection,
+      useChildReady,
+    },
+  }
+}
+
+export function makeChildBridgeHooks<
+  TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+>(defaultBridge: ChildBridge<TLocalMethods, TRemoteMethods>) {
+  interface ChildBridgeContextValue {
+    bridge: ChildBridge<TLocalMethods, TRemoteMethods>
+  }
+
+  const ChildBridgeContext = createContext<ChildBridgeContextValue | null>(null)
+
+  const ChildBridgeProvider = ({
+    children,
+    bridge = defaultBridge,
+  }: ChildBridgeProviderProps<TLocalMethods, TRemoteMethods>) => {
+    const contextValue: ChildBridgeContextValue = {
+      bridge,
+    }
+
+    return (
+      <ChildBridgeContext.Provider value={contextValue}>{children}</ChildBridgeContext.Provider>
+    )
+  }
+
+  function useChildBridge(): ChildBridge<TLocalMethods, TRemoteMethods> {
+    const context = useContext(ChildBridgeContext)
+
+    if (!context) {
+      throw new Error('useChildBridge must be used within a ChildBridgeProvider')
+    }
+
+    return context.bridge
+  }
+
+  function useRemoteProxy() {
+    const bridge = useChildBridge()
+    const remoteProxyAtom = bridge.getRemoteProxyAtom()
+    return useAtomValue(remoteProxyAtom)
+  }
+
+  function useConnection() {
+    const bridge = useChildBridge()
     const connectionAtom = bridge.getConnectionAtom()
     return useAtomValue(connectionAtom)
   }
 
   return {
-    IframeBridgeProvider,
+    ChildBridgeProvider,
     hooks: {
-      useIframeBridge,
+      useChildBridge,
       useRemoteProxy,
       useConnection,
     },
   }
-}
-
-// ==================== Legacy Hook for Compatibility ====================
-
-export function useIframeBridge<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
->(config: ConnectionConfig<TLocalMethods>): IframeBridge<TLocalMethods, TRemoteMethods> {
-  // For compatibility, create a new bridge instance
-  // In production, this should be memoized
-  return createIframeBridge<TLocalMethods, TRemoteMethods>(config)
 }

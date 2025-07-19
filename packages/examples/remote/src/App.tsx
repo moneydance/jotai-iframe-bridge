@@ -1,5 +1,9 @@
+import {
+  type ChildConnectionConfig,
+  createChildBridge,
+  type RemoteProxy,
+} from 'jotai-iframe-bridge'
 import { useEffect, useState } from 'react'
-import { connectToParent, type RemoteProxy } from '../../../jotai-iframe-bridge/src/index'
 
 // Simplified interfaces
 interface ParentMethods {
@@ -12,7 +16,26 @@ interface ChildMethods {
   subtract: (a: number, b: number) => Promise<number>
 }
 
+// Create bridge instance
+const createBridge = () => {
+  const config: ChildConnectionConfig<ChildMethods> = {
+    parentOrigin: '*',
+    methods: {
+      subtract: async (a: number, b: number) => {
+        const result = a - b
+        console.log(`Remote: ${a} - ${b} = ${result}`)
+        return result
+      },
+    },
+    timeout: 15000,
+    log: (...args) => console.log('🚌 Child Bridge:', ...args),
+  }
+
+  return createChildBridge<ChildMethods, ParentMethods>(config)
+}
+
 function App() {
+  const [bridge] = useState(() => createBridge())
   const [parentProxy, setParentProxy] = useState<RemoteProxy<ParentMethods> | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<
     'disconnected' | 'connecting' | 'connected'
@@ -24,19 +47,11 @@ function App() {
   useEffect(() => {
     setConnectionStatus('connecting')
 
-    // Connect to parent
-    connectToParent<ChildMethods, ParentMethods>({
-      parentOrigin: '*',
-      methods: {
-        subtract: async (a: number, b: number) => {
-          const result = a - b
-          console.log(`Remote: ${a} - ${b} = ${result}`)
-          return result
-        },
-      },
-      timeout: 15000,
-      log: (...args) => console.log('🚌 Child Bridge:', ...args),
-    })
+    // Connect to parent using new bridge pattern
+    bridge.connect()
+
+    bridge
+      .getRemoteProxyPromise()
       .then((proxy) => {
         console.log('✅ Child connection established!')
         setParentProxy(proxy)
@@ -46,7 +61,7 @@ function App() {
         console.error('❌ Child connection failed:', error)
         setConnectionStatus('disconnected')
       })
-  }, [])
+  }, [bridge])
 
   const testAddition = async () => {
     if (!parentProxy) return

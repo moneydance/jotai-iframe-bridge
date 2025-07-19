@@ -1,0 +1,61 @@
+# Development and Testing Rules
+
+## Testing Philosophy
+
+### Tests Should Catch Bugs - Errors Are Good
+- **Never force tests to pass by changing expectations to match broken behavior**
+- Tests failing means they're doing their job - investigate the root cause
+- If a test fails, either fix the code or the test logic, not the expectations
+- Green tests that don't catch bugs are worse than red tests that reveal issues
+
+### Integration vs Unit Testing
+- **Never mock files with `.integration` in the filename**
+- Integration tests should test real behavior, not mocked interactions
+- Unit tests can use mocks, integration tests should use real implementations
+- If an integration test needs external dependencies, prefer test environments over mocks
+
+### Test Timeout Strategy
+- Use fast timeouts (1-2 seconds) to fail quickly when things are broken
+- Don't increase timeouts to "fix" failing tests - fix the underlying issue
+- Fast feedback loops are more valuable than false green tests
+
+## Development Process
+
+### Analyze Before Acting
+- **Always identify and describe issues before implementing solutions**
+- List potential solutions with pros/cons before choosing one
+- Explain the root cause, not just the symptoms
+- Consider multiple approaches before coding
+
+### Code Changes
+- Prefer editing existing files over creating new ones
+- Make atomic, focused changes, large refactors are okay but verify with me and provide options before making them
+- Use parallel tool calls when gathering information
+- Validate fixes with tests after implementation
+
+### Architecture Decisions
+- Use Jotai reactive patterns over manual state management
+- Prefer declarative over imperative approaches
+- Eliminate race conditions through proper state synchronization
+- Direct iframe element access instead of DOM searching
+
+## Communication
+- Explain technical decisions clearly
+- Use specific examples when describing issues
+- Provide context for why changes are needed
+- Never say "comprehensive" - be specific about what's included
+
+## Error Handling
+- Don't suppress or work around errors - fix them
+- Investigate TypeScript errors properly before adding type assertions
+- Use proper error boundaries and cleanup in React components
+- Log meaningful information for debugging
+
+## Performance
+- Prefer reactive state updates over polling
+- Use proper cleanup in effects and event listeners
+- Minimize re-renders through proper dependency arrays
+- Consider lazy loading for non-critical features
+
+### Tests
+Run tests with
