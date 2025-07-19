@@ -66,11 +66,21 @@ function ConnectionSection({ result }: { result: number | null }) {
   const isConnected = remoteProxyLoadable.state === 'hasData'
   const isConnecting = remoteProxyLoadable.state === 'loading'
 
+  const handleDestroyConnection = useCallback(() => {
+    console.log(`🔥 Destroying connection [${bridge.id}]`)
+    bridge.destroy()
+  }, [bridge])
+
+  const handleRetryConnection = useCallback(() => {
+    console.log(`🔄 Retrying connection [${bridge.id}]`)
+    bridge.retry()
+  }, [bridge])
+
   return (
     <>
       {/* Connection Status */}
       <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <span className="font-semibold">Connection Status: </span>
             <ConnectionStatus state={remoteProxyLoadable.state} />
@@ -83,6 +93,26 @@ function ConnectionSection({ result }: { result: number | null }) {
               </span>
             </div>
           )}
+        </div>
+
+        {/* Connection Control Buttons */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleDestroyConnection}
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm"
+            data-testid="destroy-connection-button"
+          >
+            Destroy Connection
+          </button>
+          <button
+            type="button"
+            onClick={handleRetryConnection}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
+            data-testid="retry-connection-button"
+          >
+            Reconnect
+          </button>
         </div>
       </div>
 
@@ -101,7 +131,7 @@ function ConnectionSection({ result }: { result: number | null }) {
             }
           }}
         >
-          {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Connect'}
+          {isConnecting ? 'Connecting...' : isConnected ? 'Reconnect' : 'Connect'}
         </button>
       </div>
     </>
