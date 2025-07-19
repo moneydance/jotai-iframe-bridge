@@ -73,19 +73,38 @@ export class WindowMessenger {
       : this.concreteRemoteOrigin
   }
 
-  private handleMessageFromRemoteWindow = ({ source, origin, data }: MessageEvent): void => {
-    if (this.destroyed || source !== this.remoteWindow) {
+  private handleMessageFromRemoteWindow = ({ origin, data }: MessageEvent): void => {
+    this.log?.('🔔 Received message event:', {
+      origin,
+      dataType: typeof data,
+      isMessage: isMessage(data),
+      destroyed: this.destroyed,
+    })
+
+    if (this.destroyed) {
+      this.log?.('❌ Message ignored: WindowMessenger destroyed')
       return
     }
 
     if (this.isAllowedOrigin(origin)) {
       if (!this.concreteRemoteOrigin) {
         this.concreteRemoteOrigin = origin
+        this.log?.('✅ Set concrete remote origin:', origin)
       }
 
       if (isMessage(data)) {
+        this.log?.(
+          '✅ Valid message received, calling',
+          this.messageCallbacks.size,
+          'callbacks:',
+          data
+        )
         this.messageCallbacks.forEach((callback) => callback(data))
+      } else {
+        this.log?.('❌ Invalid message format:', data)
       }
+    } else {
+      this.log?.('❌ Message ignored: Origin not allowed:', origin, 'allowed:', this.allowedOrigins)
     }
   }
 }

@@ -36,6 +36,11 @@ export type Ack2Message = MessageBase & {
   toParticipantId: string // Child's participant ID (from ACK1)
 }
 
+export type DestroyMessage = MessageBase & {
+  type: 'DESTROY'
+  fromParticipantId: string // Who is destroying the connection
+}
+
 export type CallMessage = MessageBase & {
   type: 'CALL'
   id: string
@@ -56,10 +61,6 @@ export type ReplyMessage = MessageBase & {
         isError: true
       }
   )
-
-export type DestroyMessage = MessageBase & {
-  type: 'DESTROY'
-}
 
 export type Message =
   | SynMessage
@@ -100,6 +101,10 @@ export function isAck1Message(message: Message): message is Ack1Message {
 
 export function isAck2Message(message: Message): message is Ack2Message {
   return message.type === 'ACK2'
+}
+
+export function isDestroyMessage(message: Message): message is DestroyMessage {
+  return message.type === 'DESTROY'
 }
 
 export function isCallMessage(message: Message): message is CallMessage {

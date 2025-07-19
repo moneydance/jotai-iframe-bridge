@@ -1,8 +1,16 @@
 import { safeAssignment } from '../utils'
 import type { WindowMessenger } from './messaging'
 import { connectCallHandler, connectRemoteProxy } from './proxy'
-import type { Ack1Message, Ack2Message, Message, Methods, RemoteProxy, SynMessage } from './types'
-import { isAck1Message, isAck2Message, isSynMessage, NAMESPACE } from './types'
+import type {
+  Ack1Message,
+  Ack2Message,
+  DestroyMessage,
+  Message,
+  Methods,
+  RemoteProxy,
+  SynMessage,
+} from './types'
+import { isAck1Message, isAck2Message, isDestroyMessage, isSynMessage, NAMESPACE } from './types'
 
 // ==================== Shared Handshake Logic ====================
 
@@ -186,6 +194,35 @@ function handleAck2Message<TRemoteMethods extends Methods>(
   establishConnection<TRemoteMethods>(config, state, 'leader')
 }
 
+function handleDestroyMessage<_TRemoteMethodsss extends Methods>(
+  message: DestroyMessage,
+  config: HandshakeConfig,
+  state: HandshakeState
+): void {
+  const { log } = config
+
+  // Check if this DESTROY is from our paired participant
+  if (state.pairedParticipantId && message.fromParticipantId === state.pairedParticipantId) {
+    log?.(`Received DESTROY from paired participant: ${message.fromParticipantId}`)
+
+    // Clear pairing to allow reconnection with new participants
+    state.pairedParticipantId = null
+    state.handshakeCompleted = false
+
+    // If we have active connections, tear them down
+    state.callHandlerDestroy?.()
+    state.remoteProxyDestroy?.()
+    state.callHandlerDestroy = null
+    state.remoteProxyDestroy = null
+
+    log?.('Cleared pairing, ready for new connections')
+  } else {
+    log?.(
+      `Ignoring DESTROY from unpaired participant: ${message.fromParticipantId} (paired with: ${state.pairedParticipantId})`
+    )
+  }
+}
+
 function establishConnection<TRemoteMethods extends Methods>(
   config: HandshakeConfig,
   state: HandshakeState,
@@ -232,6 +269,8 @@ function createMessageHandler<TRemoteMethods extends Methods>(
       handleAck1Message<TRemoteMethods>(message, config, state)
     } else if (isAck2Message(message)) {
       handleAck2Message<TRemoteMethods>(message, config, state)
+    } else if (isDestroyMessage(message)) {
+      handleDestroyMessage<TRemoteMethods>(message, config, state)
     } else {
       log?.('📨 Ignoring non-handshake message:', message.type)
     }
@@ -269,6 +308,8 @@ export function createHandshakeHandler<TRemoteMethods extends Methods = Methods>
 ): () => void {
   const { messenger, methods, timeout, log, onError } = config
 
+  log?.('🔧 Creating handshake handler')
+
   const state: HandshakeState = {
     handshakeCompleted: false,
     callHandlerDestroy: null,
@@ -279,6 +320,7 @@ export function createHandshakeHandler<TRemoteMethods extends Methods = Methods>
 
   // Set up call handler for incoming method calls
   if (methods) {
+    log?.('🔧 Setting up call handler for methods')
     state.callHandlerDestroy = connectCallHandler(
       messenger,
       methods,
@@ -288,26 +330,39 @@ export function createHandshakeHandler<TRemoteMethods extends Methods = Methods>
   }
 
   // Set up handshake message handler
+  log?.('🔧 Creating handshake message handler')
   const handleHandshakeMessage = createMessageHandler<TRemoteMethods>(config, state)
   state.messageHandler = handleHandshakeMessage
+
+  log?.('🔧 Registering handshake message handler with messenger')
   messenger.addMessageHandler(handleHandshakeMessage)
+  log?.('🔧 Registered handshake message handler successfully')
 
   // Send initial SYN message
+  log?.('🔧 Sending initial SYN message')
   const synSent = sendInitialSynMessage(config)
   if (!synSent) {
+    log?.('❌ Failed to send initial SYN, returning empty cleanup')
     return () => {} // Return empty cleanup if initial SYN failed
   }
 
   // Set up timeout
+  log?.('🔧 Setting up handshake timeout:', timeout, 'ms')
   const timeoutId = setTimeout(() => {
     if (!state.handshakeCompleted) {
+      log?.('⏰ Handshake timeout, removing message handler')
       messenger.removeMessageHandler(handleHandshakeMessage)
       onError(new Error(`Connection timeout after ${timeout}ms`))
     }
   }, timeout)
 
+  log?.('✅ Handshake handler setup complete')
+
   // Return cleanup function
   return () => {
+    // biome-ignore lint/suspicious/noDebugger: <explanation>
+    debugger
+    log?.('🧹 Cleaning up handshake handler')
     clearTimeout(timeoutId)
     messenger.removeMessageHandler(handleHandshakeMessage)
     state.callHandlerDestroy?.()

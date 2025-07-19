@@ -1,5 +1,6 @@
 import type { Atom } from 'jotai'
 import { atom, getDefaultStore } from 'jotai'
+import { observe } from 'jotai-effect'
 import { createHandshakeHandler } from '../connection/handshake'
 import { WindowMessenger } from '../connection/messaging'
 import type { Methods, RemoteProxy } from '../connection/types'
@@ -16,7 +17,18 @@ type Store = ReturnType<typeof getDefaultStore>
 function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionConfig) {
   // Core atoms
   const remoteWindowAtom = atom<Window | null>(null)
-  const participantIdAtom = atom(generateId)
+  const participantIdAtom = atom(generateId())
+
+  // Messenger atom - creates messenger when window is available
+  const messengerAtom = atom<WindowMessenger | null>((get) => {
+    const remoteWindow = get(remoteWindowAtom)
+    if (!remoteWindow) {
+      return null
+    }
+
+    const messenger = new WindowMessenger(remoteWindow, config.allowedOrigins, config.log)
+    return messenger
+  })
 
   // Lazy deferred atom - null when disconnected, creates deferred when connecting
   const remoteProxyDeferredAtom = atom<ReturnType<
@@ -35,9 +47,6 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
   const remoteProxyAtom = lazyLoadable(remoteProxyPromiseAtom)
 
   const reset = (store: Store) => {
-    config.log?.(`🧹 Resetting Bridge`)
-
-    // Clean up local state
     const remoteProxyDeferred = store.get(remoteProxyDeferredAtom)
     if (remoteProxyDeferred?.status === 'pending') {
       remoteProxyDeferred.reject(new Error('Bridge destroyed before connection was established'))
@@ -47,46 +56,18 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
   }
 
   const connect = (store: Store, targetWindow: Window) => {
-    config.log?.(`🚀 Bridge connecting to target window`)
-
     // Only create a new deferred if we don't have one or it's already resolved/rejected
     const currentDeferred = store.get(remoteProxyDeferredAtom)
     if (currentDeferred?.status !== 'pending') {
       store.set(remoteProxyDeferredAtom, createDeferred<RemoteProxy<TRemoteMethods>>())
     }
     store.set(remoteWindowAtom, targetWindow)
-
-    // Create messenger and start handshake immediately
-    const messenger = new WindowMessenger(targetWindow, config.allowedOrigins, config.log)
-    const participantId = store.get(participantIdAtom)
-    const handshakeTimeout = config.timeout ?? 10000
-
-    const handshakeCleanup = createHandshakeHandler<TRemoteMethods>({
-      ...config,
-      messenger,
-      participantId,
-      timeout: handshakeTimeout,
-      onConnectionEstablished: (remoteProxy: RemoteProxy<TRemoteMethods>) => {
-        const deferred = store.get(remoteProxyDeferredAtom)
-        if (deferred) {
-          deferred.resolve(remoteProxy)
-        }
-      },
-      onError: (error: Error) => {
-        const deferred = store.get(remoteProxyDeferredAtom)
-        if (deferred) {
-          deferred.reject(error)
-        }
-      },
-    })
-
-    // Return cleanup function for bridge to store
-    return handshakeCleanup
   }
 
   return {
     remoteWindowAtom,
     participantIdAtom,
+    messengerAtom,
     remoteProxyDeferredAtom,
     remoteProxyPromiseAtom,
     remoteProxyAtom,
@@ -95,6 +76,65 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
       connect,
     },
   }
+}
+
+type BridgeAtoms<TRemoteMethods extends Methods> = ReturnType<
+  typeof createBridgeAtoms<TRemoteMethods>
+>
+
+// ==================== Connection Effect ====================
+
+function createConnectionEffect<TRemoteMethods extends Methods>(
+  config: ConnectionConfig,
+  atoms: BridgeAtoms<TRemoteMethods>,
+  store: Store
+): () => void {
+  return observe((get, _set) => {
+    const messenger = get(atoms.messengerAtom)
+    if (!messenger) {
+      return
+    }
+
+    const targetWindow = get(atoms.remoteWindowAtom)
+    if (!targetWindow) {
+      return
+    }
+
+    // Check if we have a deferred that needs a handshake
+    const deferred = get(atoms.remoteProxyDeferredAtom)
+    if (!deferred || deferred.status !== 'pending') {
+      // No pending connection to establish
+      return
+    }
+
+    // Start handshake process using shared handler
+    const participantId = get(atoms.participantIdAtom)
+    const handshakeTimeout = config.timeout ?? 10000
+
+    const handshakeCleanup = createHandshakeHandler<TRemoteMethods>({
+      ...config,
+      messenger,
+      participantId,
+      timeout: handshakeTimeout,
+      onConnectionEstablished: (remoteProxy: RemoteProxy<TRemoteMethods>) => {
+        const deferred = get.peek(atoms.remoteProxyDeferredAtom)
+        if (deferred) {
+          deferred.resolve(remoteProxy)
+        }
+      },
+      onError: (error: Error) => {
+        const deferred = get.peek(atoms.remoteProxyDeferredAtom)
+        if (deferred) {
+          deferred.reject(error)
+        }
+      },
+    })
+
+    // Return cleanup function
+    return () => {
+      handshakeCleanup()
+    }
+  }, store)
 }
 
 // ==================== Main Bridge Creation ====================
@@ -108,33 +148,32 @@ export function createBridge<
 ): Bridge<TLocalMethods, TRemoteMethods> {
   // Generate unique ID for this bridge instance
   const bridgeId = generateId()
-  config.log?.(`🚌 Bridge: 🆔 Creating Bridge with ID: ${bridgeId}`)
+  config.log?.(`🆔 Creating Bridge with ID: ${bridgeId}`)
 
-  // Create atoms with configuration
+  // Create all bridge atoms
   const atoms = createBridgeAtoms<TRemoteMethods>(config)
 
-  // Store current handshake cleanup for reset functionality
-  let currentHandshakeCleanup: (() => void) | null = null
+  let unsubscribeFromMessengerChange: () => void
 
-  const bridge: Bridge<TLocalMethods, TRemoteMethods> = {
+  const initialize = () => {
+    // Set up connection lifecycle effect
+    unsubscribeFromMessengerChange = createConnectionEffect(config, atoms, store)
+  }
+
+  initialize()
+
+  // Return bridge implementation
+  return {
     id: bridgeId,
 
     connect(targetWindow?: Window): void {
-      const window = targetWindow || (self.parent !== self ? self.parent : undefined)
+      const window =
+        targetWindow ?? (typeof globalThis !== 'undefined' ? globalThis.parent : undefined)
       if (!window) {
-        throw new Error('No target window provided and not in iframe context')
+        throw new Error('No target window available for connection')
       }
-
       config.log?.(`🚀 Bridge ${bridgeId} connecting to target window`)
-
-      // Clean up any existing handshake
-      if (currentHandshakeCleanup) {
-        currentHandshakeCleanup()
-        currentHandshakeCleanup = null
-      }
-
-      // Start new handshake
-      currentHandshakeCleanup = atoms.actions.connect(store, window)
+      atoms.actions.connect(store, window)
     },
 
     isConnected(): boolean {
@@ -143,6 +182,8 @@ export function createBridge<
     },
 
     getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> | null {
+      const deferred = store.get(atoms.remoteProxyDeferredAtom)
+      if (!deferred) return null
       return store.get(atoms.remoteProxyPromiseAtom)
     },
 
@@ -152,16 +193,8 @@ export function createBridge<
 
     reset(): void {
       config.log?.(`🧹 Resetting Bridge ${bridgeId}`)
-
-      // Clean up handshake if active
-      if (currentHandshakeCleanup) {
-        currentHandshakeCleanup()
-        currentHandshakeCleanup = null
-      }
-
       atoms.actions.reset(store)
+      unsubscribeFromMessengerChange()
     },
   }
-
-  return bridge
 }
