@@ -16,7 +16,9 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "pnpm run build:js && pnpm run build:types",
+    "build:js": "tsup",
+    "build:types": "tsc --project tsconfig.build.json && cp -r dist-types/src/* dist/ && rm -rf dist-types",
     "dev": "tsup --watch",
     "test": "vitest",
     "test:watch": "vitest --watch",
@@ -40,6 +42,8 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "jotai": "^2.10.3",
+    "jotai-effect": "^1.0.2",
     "jsdom": "^24.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -49,10 +53,7 @@
     "@vitest/browser": "^3.2.4",
     "playwright": "^1.54.1"
   },
-  "dependencies": {
-    "jotai": "^2.10.3",
-    "jotai-effect": "^1.0.2"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "react": ">=18.0.0",
     "jotai": ">=2.0.0",
