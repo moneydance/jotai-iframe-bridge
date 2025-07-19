@@ -40,10 +40,21 @@ function ConnectionStatus({ state }: { state: string }) {
 // Connection Section Helper Component
 function ConnectionSection({ result }: { result: number | null }) {
   const remoteProxyLoadable = useRemoteProxy()
+  const bridge = useBridge()
+
+  const handleDestroyConnection = useCallback(() => {
+    console.log(`🔥 Destroying connection [${bridge.id}]`)
+    bridge.reset()
+  }, [bridge])
+
+  const handleRetryConnection = useCallback(() => {
+    console.log(`🔄 Retrying connection [${bridge.id}]`)
+    bridge.connect() // Connect to parent window
+  }, [bridge])
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <span className="font-semibold">Connection Status: </span>
           <ConnectionStatus state={remoteProxyLoadable.state} />
@@ -56,6 +67,28 @@ function ConnectionSection({ result }: { result: number | null }) {
             </span>
           </div>
         )}
+      </div>
+
+      {/* Connection Control Buttons */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={remoteProxyLoadable.state === 'loading'}
+          onClick={handleDestroyConnection}
+          className="px-4 py-2 bg-red-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500 hover:bg-red-600"
+          data-testid="destroy-connection-button"
+        >
+          Destroy Connection
+        </button>
+        <button
+          type="button"
+          disabled={remoteProxyLoadable.state === 'loading'}
+          onClick={handleRetryConnection}
+          className="px-4 py-2 bg-blue-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 hover:bg-blue-600"
+          data-testid="retry-connection-button"
+        >
+          Reconnect
+        </button>
       </div>
     </div>
   )
@@ -106,7 +139,7 @@ function CalculationSection({
         <button
           type="button"
           onClick={onCalculate}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+          className="px-4 py-2 bg-blue-500 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 hover:bg-blue-600"
           data-testid="calculate-add-button"
         >
           Calculate in Host
@@ -114,23 +147,6 @@ function CalculationSection({
       </div>
 
       <p className="text-sm text-gray-600">This will call the add method in the host application</p>
-    </div>
-  )
-}
-
-// Info Section Helper Component
-function InfoSection() {
-  return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h3 className="text-xl font-semibold text-gray-700 mb-4">Available Operations</h3>
-      <div className="space-y-2 text-sm text-gray-600">
-        <div>
-          <strong>Local:</strong> subtract(a, b) - Subtraction performed in this iframe
-        </div>
-        <div>
-          <strong>Remote:</strong> add(a, b) - Addition called in the host application
-        </div>
-      </div>
     </div>
   )
 }
@@ -197,17 +213,6 @@ export function AppContent() {
           onNumberBChange={setNumberB}
           onCalculate={testAddition}
         />
-
-        <InfoSection />
-
-        {/* Debug Information */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm">
-          <h4 className="font-semibold mb-2">Debug Information:</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div>Bridge Initialized: {bridge.isInitialized() ? '✅' : '❌'}</div>
-            <div>Remote Proxy State: {remoteProxyLoadable.state}</div>
-          </div>
-        </div>
       </div>
     </div>
   )

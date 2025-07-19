@@ -35,6 +35,15 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
   // Loadable atom for React integration
   const remoteProxyAtom = loadable(remoteProxyPromiseAtom)
 
+  const reset = (store: Store) => {
+    const remoteProxyDeferred = store.get(remoteProxyDeferredAtom)
+    if (remoteProxyDeferred.status === 'pending') {
+      remoteProxyDeferred.reject(new Error('Bridge destroyed before connection was established'))
+    }
+    store.set(remoteProxyDeferredAtom, createDeferred<RemoteProxy<TRemoteMethods>>())
+    store.set(remoteWindowAtom, null)
+  }
+
   return {
     remoteWindowAtom,
     participantIdAtom,
@@ -42,6 +51,9 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
     remoteProxyDeferredAtom,
     remoteProxyPromiseAtom,
     remoteProxyAtom,
+    actions: {
+      reset,
+    },
   }
 }
 
@@ -56,15 +68,9 @@ function createConnectionEffect<TRemoteMethods extends Methods>(
   atoms: BridgeAtoms<TRemoteMethods>,
   store: Store
 ): () => void {
-  return observe((get, set) => {
+  return observe((get, _set) => {
     const messenger = get(atoms.messengerAtom)
-
     if (!messenger) {
-      // Reset connection when messenger is null
-      const remoteProxyDeferred = get.peek(atoms.remoteProxyDeferredAtom)
-      if (remoteProxyDeferred.status !== 'pending') {
-        set(atoms.remoteProxyDeferredAtom, createDeferred<RemoteProxy<TRemoteMethods>>())
-      }
       return
     }
 
@@ -109,8 +115,14 @@ export function createBridge<
   // Create all bridge atoms
   const atoms = createBridgeAtoms<TRemoteMethods>(config)
 
-  // Set up connection lifecycle effect
-  const unsubscribeFromMessengerChange = createConnectionEffect(config, atoms, store)
+  let unsubscribeFromMessengerChange: () => void
+
+  const initialize = () => {
+    // Set up connection lifecycle effect
+    unsubscribeFromMessengerChange = createConnectionEffect(config, atoms, store)
+  }
+
+  initialize()
 
   // Return bridge implementation
   return {
@@ -126,7 +138,7 @@ export function createBridge<
       store.set(atoms.remoteWindowAtom, window)
     },
 
-    isInitialized(): boolean {
+    isConnected(): boolean {
       return store.get(atoms.remoteProxyAtom).state === 'hasData'
     },
 
@@ -138,20 +150,10 @@ export function createBridge<
       return atoms.remoteProxyAtom
     },
 
-    destroy(): void {
-      config.log?.(`🧹 Bridge ${bridgeId} destroying`)
-      store.set(atoms.remoteWindowAtom, null)
+    reset(): void {
+      config.log?.(`🧹 Resetting Bridge ${bridgeId}`)
+      atoms.actions.reset(store)
       unsubscribeFromMessengerChange()
-    },
-
-    retry(): void {
-      config.log?.(`🔄 Bridge ${bridgeId} retrying connection`)
-      const window = store.get(atoms.remoteWindowAtom)
-      this.destroy()
-      if (!window) {
-        return
-      }
-      this.connect(window)
     },
   }
 }

@@ -24,9 +24,8 @@ export interface Bridge<
 > {
   id: string
   connect(targetWindow?: Window): void
-  isInitialized(): boolean
+  isConnected(): boolean
   getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
   getRemoteProxyAtom(): LoadableAtom<RemoteProxy<TRemoteMethods>>
-  destroy(): void
-  retry(): void
+  reset(): void
 }

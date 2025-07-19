@@ -58,23 +58,29 @@ function ConnectionStatus({ state, className = '' }: ConnectionStatusProps) {
 }
 
 // Connection Section Helper Component (uses hooks directly)
-function ConnectionSection({ result }: { result: number | null }) {
+function ConnectionSection({
+  result,
+  iframeElement,
+}: {
+  result: number | null
+  iframeElement: HTMLIFrameElement | null
+}) {
   const bridge = useBridge()
   const remoteProxyLoadable = useRemoteProxy()
 
-  // Derive connection status from remote proxy state
-  const isConnected = remoteProxyLoadable.state === 'hasData'
-  const isConnecting = remoteProxyLoadable.state === 'loading'
-
   const handleDestroyConnection = useCallback(() => {
-    console.log(`🔥 Destroying connection [${bridge.id}]`)
-    bridge.destroy()
+    console.log(`🔥 Resetting connection [${bridge.id}]`)
+    bridge.reset()
   }, [bridge])
 
   const handleRetryConnection = useCallback(() => {
     console.log(`🔄 Retrying connection [${bridge.id}]`)
-    bridge.retry()
-  }, [bridge])
+    if (!iframeElement?.contentWindow) {
+      console.error(`Iframe content window not found [${bridge.id}]`)
+      return
+    }
+    bridge.connect(iframeElement.contentWindow)
+  }, [bridge, iframeElement?.contentWindow])
 
   return (
     <>
@@ -99,40 +105,23 @@ function ConnectionSection({ result }: { result: number | null }) {
         <div className="flex gap-2">
           <button
             type="button"
+            disabled={remoteProxyLoadable.state === 'loading'}
             onClick={handleDestroyConnection}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors text-sm"
+            className="px-4 py-2 bg-red-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500 hover:bg-red-600"
             data-testid="destroy-connection-button"
           >
             Destroy Connection
           </button>
           <button
             type="button"
+            disabled={!iframeElement?.contentWindow || remoteProxyLoadable.state === 'loading'}
             onClick={handleRetryConnection}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
+            className="px-4 py-2 bg-blue-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 hover:bg-blue-600"
             data-testid="retry-connection-button"
           >
             Reconnect
           </button>
         </div>
-      </div>
-
-      {/* Connection Control */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h3 className="text-xl font-semibold text-gray-700 mb-4">Connection</h3>
-        <button
-          type="button"
-          className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 transition-colors"
-          data-testid="connect-button"
-          disabled={isConnecting}
-          onClick={() => {
-            if (!isConnecting) {
-              console.log(`Manual connection requested [${bridge.id}]`)
-              bridge.retry()
-            }
-          }}
-        >
-          {isConnecting ? 'Connecting...' : isConnected ? 'Reconnect' : 'Connect'}
-        </button>
       </div>
     </>
   )
@@ -183,7 +172,7 @@ function CalculationSection({
         <button
           type="button"
           onClick={onCalculate}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+          className="px-4 py-2 bg-green-500 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-500 hover:bg-green-600"
           data-testid="calculate-subtract-button"
         >
           Calculate in Remote
@@ -198,69 +187,83 @@ function CalculationSection({
 }
 
 // Iframe Container Helper Component (uses hooks directly)
-const IframeContainer = memo(() => {
-  const bridge = useBridge()
-  const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
+const IframeContainer = memo(
+  ({
+    iframeElement,
+    setIframeElement,
+  }: {
+    iframeElement: HTMLIFrameElement | null
+    setIframeElement: (element: HTMLIFrameElement | null) => void
+  }) => {
+    const bridge = useBridge()
+    const remoteProxyLoadable = useRemoteProxy()
 
-  // Handle iframe initialization when element becomes available and loaded
-  useEffect(() => {
-    if (!iframeElement?.contentWindow) {
-      return
-    }
-    console.log(`🚀 Connecting bridge [${bridge.id}] to iframe content window`)
-
-    const contentWindow = iframeElement.contentWindow
-    const [ok, error] = safeAssignment(() => {
-      bridge.connect(contentWindow)
-    })
-    if (!ok) {
-      console.error(`Bridge connection failed [${bridge.id}]:`, error)
-      return
-    }
-
-    return () => {
-      const [destroyOk, destroyError] = safeAssignment(() => {
-        bridge.destroy()
-      })
-      if (!destroyOk) {
-        console.error(`Bridge destroy failed [${bridge.id}]:`, destroyError)
+    // Handle iframe initialization when element becomes available and loaded
+    useEffect(() => {
+      if (!iframeElement?.contentWindow) {
+        return
       }
-    }
-  }, [bridge, iframeElement])
 
-  const handleIframeRef = useCallback(
-    (element: HTMLIFrameElement | null) => {
-      console.log(`📎 Iframe ref callback [${bridge.id}]:`, {
-        element,
-        contentWindow: element?.contentWindow,
+      // If already connected, don't reconnect
+      if (remoteProxyLoadable.state === 'hasData') {
+        return
+      }
+
+      console.log(`🚀 Connecting bridge [${bridge.id}] to iframe content window`)
+
+      const contentWindow = iframeElement.contentWindow
+      const [ok, error] = safeAssignment(() => {
+        bridge.connect(contentWindow)
       })
-      setIframeElement(element)
-    },
-    [bridge.id]
-  )
+      if (!ok) {
+        console.error(`Bridge connection failed [${bridge.id}]:`, error)
+        return
+      }
 
-  return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      <h3 className="text-xl font-semibold text-gray-700 mb-4">Remote Application</h3>
-      <div className="border-2 border-gray-300 rounded">
-        <iframe
-          ref={handleIframeRef}
-          src={REMOTE_URL}
-          className="w-full h-96"
-          title="Child Frame"
-          onLoad={() => {
-            console.log(`📦 Iframe loaded [${bridge.id}]`)
-          }}
-        />
+      return () => {
+        const [resetOk, resetError] = safeAssignment(() => {
+          bridge.reset()
+        })
+        if (!resetOk) {
+          console.error(`Bridge reset failed [${bridge.id}]:`, resetError)
+        }
+      }
+    }, [bridge, remoteProxyLoadable.state, iframeElement?.contentWindow])
+
+    const handleIframeRef = useCallback(
+      (element: HTMLIFrameElement | null) => {
+        console.log(`📎 Iframe ref callback [${bridge.id}]:`, {
+          element,
+          contentWindow: element?.contentWindow,
+        })
+        setIframeElement(element)
+      },
+      [bridge.id, setIframeElement]
+    )
+
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <h3 className="text-xl font-semibold text-gray-700 mb-4">Remote Application</h3>
+        <div className="border-2 border-gray-300 rounded">
+          <iframe
+            ref={handleIframeRef}
+            src={REMOTE_URL}
+            className="w-full h-96"
+            title="Child Frame"
+            onLoad={() => {
+              console.log(`📦 Iframe loaded [${bridge.id}]`)
+            }}
+          />
+        </div>
+        <div className="mt-4 text-sm text-gray-600">
+          <p>
+            <strong>Note:</strong> Make sure the remote app is running on localhost:5174
+          </p>
+        </div>
       </div>
-      <div className="mt-4 text-sm text-gray-600">
-        <p>
-          <strong>Note:</strong> Make sure the remote app is running on localhost:5174
-        </p>
-      </div>
-    </div>
-  )
-})
+    )
+  }
+)
 
 IframeContainer.displayName = 'IframeContainer'
 
@@ -269,6 +272,8 @@ export function AppContent() {
   const [result, setResult] = useState<number | null>(null)
   const [numberA, setNumberA] = useState<number>(10)
   const [numberB, setNumberB] = useState<number>(5)
+  const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
+
   const remoteProxyLoadable = useRemoteProxy()
 
   const testSubtraction = async () => {
@@ -294,7 +299,7 @@ export function AppContent() {
           <p className="text-gray-600">Testing iframe bridge with simple math operations</p>
         </div>
 
-        <ConnectionSection result={result} />
+        <ConnectionSection result={result} iframeElement={iframeElement} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Controls */}
@@ -309,17 +314,7 @@ export function AppContent() {
           </div>
 
           {/* Iframe */}
-          <IframeContainer />
-        </div>
-
-        {/* Debug Info */}
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg text-sm">
-          <h4 className="font-semibold mb-2">Debug Information:</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div>Bridge Initialized: {bridge.isInitialized() ? '✅' : '❌'}</div>
-            <div>Connection State: {remoteProxyLoadable.state}</div>
-            <div>Remote Proxy State: {remoteProxyLoadable.state}</div>
-          </div>
+          <IframeContainer iframeElement={iframeElement} setIframeElement={setIframeElement} />
         </div>
       </div>
     </div>
