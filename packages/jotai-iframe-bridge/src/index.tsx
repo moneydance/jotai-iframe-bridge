@@ -5,17 +5,20 @@ import { createContext, type ReactNode, useContext } from 'react'
 
 // ==================== Core Types ====================
 
-export type Methods = Record<string, (...args: unknown[]) => unknown>
+// biome-ignore lint/suspicious/noExplicitAny: Methods type that accepts both strict interfaces and loose records
+export type Methods = Record<string, (...args: any[]) => any>
 
 export type MethodPath = string[]
 
-export type RemoteProxy<T extends Methods> = {
+export type RemoteProxy<T extends Record<keyof T, (...args: any[]) => any>> = {
   [K in keyof T]: T[K] extends (...args: infer P) => infer R ? (...args: P) => Promise<R> : never
 }
 
 // ==================== Configuration Interfaces ====================
 
-export interface ConnectionConfig<TLocalMethods extends Methods = Methods> {
+export interface ConnectionConfig<
+  TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
+> {
   allowedOrigins: string[]
   methods?: TLocalMethods
   timeout?: number
@@ -252,7 +255,7 @@ function createDeferred<T>(): Deferred<T> {
 
 // ==================== Connection ====================
 
-export class Connection<T extends Methods = Methods> {
+export class Connection<T extends Record<keyof T, (...args: any[]) => any> = Methods> {
   public promise: Promise<RemoteProxy<T>>
   private destroyFn: () => void
   private _destroyed = false
@@ -649,8 +652,8 @@ function createHandshakeHandler<TRemoteMethods extends Methods = Methods>(
 type LoadableAtom<T> = ReturnType<typeof loadable<T>>
 
 export interface Bridge<
-  _TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
+  _TLocalMethods extends Record<keyof _TLocalMethods, (...args: any[]) => any> = Methods,
+  TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any> = Methods,
 > {
   id: string
   connect(targetWindow?: Window): void
@@ -664,8 +667,8 @@ export interface Bridge<
 }
 
 export function createBridge<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
+  TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
+  TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any> = Methods,
 >(
   config: ConnectionConfig<TLocalMethods>,
   store: Store = getDefaultStore()
@@ -817,8 +820,8 @@ interface BridgeContextValue<
 }
 
 export function createBridgeProvider<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
+  TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
+  TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any> = Methods,
 >() {
   const BridgeContext = createContext<
     BridgeContextValue<TLocalMethods, TRemoteMethods> | undefined

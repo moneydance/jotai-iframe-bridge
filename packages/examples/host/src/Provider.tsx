@@ -7,20 +7,16 @@ import {
 } from 'jotai-iframe-bridge'
 import type { ReactNode } from 'react'
 
-// Define the interfaces for type safety
+// Define strict interfaces for type safety
 interface ParentMethods {
-  // biome-ignore lint/suspicious/noExplicitAny: Method interface needs flexibility for various return types
-  [methodName: string]: (...args: any[]) => any
   add: (a: number, b: number) => Promise<number>
 }
 
 interface ChildMethods {
-  // biome-ignore lint/suspicious/noExplicitAny: Method interface needs flexibility for various return types
-  [methodName: string]: (...args: any[]) => any
   subtract: (a: number, b: number) => Promise<number>
 }
 
-// Create bridge configuration
+// Create bridge configuration with strict typing
 const createDefaultBridge = (
   store?: ReturnType<typeof createStore>
 ): Bridge<ParentMethods, ChildMethods> => {
