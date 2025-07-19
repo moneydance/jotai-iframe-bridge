@@ -1,29 +1,13 @@
-import { AppContent, REMOTE_URL } from './Content'
-import {
-  AppProvider,
-  type ChildMethods,
-  defaultBridge,
-  type ParentBridge,
-  type ParentMethods,
-} from './Provider'
-
-// Export for testing
-export { REMOTE_URL }
+import { AppContent } from './Content'
+import { AppProvider } from './Provider'
 
 // App component with optional props for dependency injection
-interface AppProps {
-  bridge?: ParentBridge<ParentMethods, ChildMethods>
-}
-
-function App({ bridge = defaultBridge }: AppProps) {
+function App() {
   return (
-    <AppProvider bridge={bridge}>
+    <AppProvider>
       <AppContent />
     </AppProvider>
   )
 }
-
-// Export types and functions for testing
-export type { ParentMethods, ChildMethods, AppProps }
 
 export default App

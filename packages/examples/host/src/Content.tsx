@@ -63,27 +63,13 @@ const IframeContainer = memo(() => {
 
   // Handle iframe initialization when element becomes available and loaded
   useEffect(() => {
-    if (!iframeElement || bridge.isInitialized()) {
+    if (!iframeElement?.contentWindow) {
       return
     }
-
-    const handleLoad = () => {
-      if (iframeElement.contentWindow && !bridge.isInitialized()) {
-        console.log('🚀 Connecting bridge to iframe content window')
-        bridge.connect(iframeElement.contentWindow)
-      }
-    }
-
-    // Check if iframe is already loaded
-    if (iframeElement.contentDocument?.readyState === 'complete') {
-      handleLoad()
-    } else {
-      console.log('🔧 Adding load event listener to iframe')
-      iframeElement.addEventListener('load', handleLoad, { once: true })
-    }
-
+    console.log('🚀 Connecting bridge to iframe content window')
+    bridge.connect(iframeElement.contentWindow)
     return () => {
-      iframeElement.removeEventListener('load', handleLoad)
+      bridge.destroy()
     }
   }, [iframeElement, bridge])
 
