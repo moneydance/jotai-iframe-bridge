@@ -1,6 +1,6 @@
 import { type RenderResult, render } from '@testing-library/react'
 import { createStore } from 'jotai'
-import type { ParentBridge } from 'jotai-iframe-bridge'
+import type { Bridge } from 'jotai-iframe-bridge'
 import type { ReactElement, ReactNode } from 'react'
 import {
   AppProvider,
@@ -11,7 +11,7 @@ import {
 
 // Test context options
 interface RenderAppOptions {
-  bridge?: ParentBridge<ParentMethods, ChildMethods>
+  bridge?: Bridge<ParentMethods, ChildMethods>
   store?: ReturnType<typeof createStore>
 }
 
@@ -22,7 +22,7 @@ const TestAppContext = ({
   store,
 }: {
   children: ReactNode
-  bridge: ParentBridge<ParentMethods, ChildMethods>
+  bridge: Bridge<ParentMethods, ChildMethods>
   store: ReturnType<typeof createStore>
 }) => {
   return (
@@ -34,7 +34,7 @@ const TestAppContext = ({
 
 // Return type for renderApp
 interface RenderAppResult extends RenderResult {
-  testBridge: ParentBridge<ParentMethods, ChildMethods>
+  testBridge: Bridge<ParentMethods, ChildMethods>
   testStore: ReturnType<typeof createStore>
 }
 
@@ -59,7 +59,6 @@ export function renderApp(ui: ReactElement, options: RenderAppOptions = {}): Ren
   }
 }
 
-// Export utilities for tests
 export { createDefaultBridge }
 export type { ParentMethods, ChildMethods }
-export type { ParentBridge }
+export type { Bridge }

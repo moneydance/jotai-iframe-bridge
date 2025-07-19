@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createStore } from 'jotai'
-import type { ParentBridge } from 'jotai-iframe-bridge'
+import type { Bridge } from 'jotai-iframe-bridge'
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest'
 import { AppContent, REMOTE_URL } from '../src/Content'
 import type { ChildMethods, ParentMethods } from '../src/Provider'
@@ -21,7 +21,7 @@ async function isRemoteAppRunning(): Promise<boolean> {
 }
 
 // Helper function to wait for UI to show connected state
-async function waitForIframeConnection(bridge: ParentBridge<ParentMethods, ChildMethods>) {
+async function waitForIframeConnection(bridge: Bridge<ParentMethods, ChildMethods>) {
   try {
     console.log(`⏳ Waiting for bridge ${bridge.id} UI to show connected...`)
 
@@ -40,7 +40,7 @@ async function waitForIframeConnection(bridge: ParentBridge<ParentMethods, Child
 }
 
 describe('AppContent - Real UI Testing', () => {
-  let testBridge: ParentBridge<ParentMethods, ChildMethods>
+  let testBridge: Bridge<ParentMethods, ChildMethods>
   let testStore: ReturnType<typeof createStore>
 
   beforeAll(async () => {

@@ -1,6 +1,6 @@
 import type { Loadable } from 'jotai/vanilla/utils/loadable'
 import { memo, useCallback, useEffect, useState } from 'react'
-import { useChildReady, useConnection, useParentBridge, useRemoteProxy } from './Provider'
+import { useBridge, useConnection, useRemoteProxy } from './Provider'
 
 // Export for testing
 export const REMOTE_URL = 'http://localhost:5174'
@@ -58,23 +58,34 @@ function ConnectionStatus({ state, className = '' }: ConnectionStatusProps) {
 
 // Memoized iframe component to prevent unnecessary re-renders
 const IframeContainer = memo(() => {
-  const bridge = useParentBridge()
+  const bridge = useBridge()
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
 
-  // Handle iframe initialization when element becomes available
+  // Handle iframe initialization when element becomes available and loaded
   useEffect(() => {
-    console.log('🖼️ useEffect: iframe element changed', {
-      iframeElement,
-      hasContentWindow: !!iframeElement?.contentWindow,
-      isInitialized: bridge.isInitialized(),
-    })
-
-    if (iframeElement?.contentWindow && !bridge.isInitialized()) {
-      console.log('🚀 Initializing bridge with iframe element')
-      bridge.init(iframeElement)
-      bridge.connect()
+    if (!iframeElement || bridge.isInitialized()) {
+      return
     }
-  }, [iframeElement, bridge.isInitialized, bridge.init, bridge.connect]) // Removed bridge from dependency array
+
+    const handleLoad = () => {
+      if (iframeElement.contentWindow && !bridge.isInitialized()) {
+        console.log('🚀 Connecting bridge to iframe content window')
+        bridge.connect(iframeElement.contentWindow)
+      }
+    }
+
+    // Check if iframe is already loaded
+    if (iframeElement.contentDocument?.readyState === 'complete') {
+      handleLoad()
+    } else {
+      console.log('🔧 Adding load event listener to iframe')
+      iframeElement.addEventListener('load', handleLoad, { once: true })
+    }
+
+    return () => {
+      iframeElement.removeEventListener('load', handleLoad)
+    }
+  }, [iframeElement, bridge])
 
   const handleIframeRef = useCallback((element: HTMLIFrameElement | null) => {
     console.log('📎 Iframe ref callback:', { element, contentWindow: element?.contentWindow })
@@ -107,17 +118,14 @@ const IframeContainer = memo(() => {
 IframeContainer.displayName = 'IframeContainer'
 
 export function AppContent() {
-  const bridge = useParentBridge()
+  const bridge = useBridge()
   const [result, setResult] = useState<number | null>(null)
   const [numberA, setNumberA] = useState<number>(10)
   const [numberB, setNumberB] = useState<number>(5)
-  const isChildReady = useChildReady()
   const connectionLoadable = useConnection()
   const remoteProxyLoadable = useRemoteProxy()
 
-  const initializeConnection = () => {
-    bridge.connect()
-  }
+  // Connection is now handled automatically by init() - no separate connect needed
 
   const testSubtraction = async () => {
     if (remoteProxyLoadable.state !== 'hasData') return
@@ -165,12 +173,12 @@ export function AppContent() {
               <h3 className="text-xl font-semibold text-gray-700 mb-4">Connection</h3>
               <button
                 type="button"
-                onClick={initializeConnection}
-                disabled={connectionLoadable.state === 'loading' || !isChildReady}
+                onClick={() => bridge.retry()}
+                disabled={connectionLoadable.state === 'loading'}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 transition-colors"
                 data-testid="connect-button"
               >
-                {connectionLoadable.state === 'loading' ? 'Connecting...' : 'Initialize Connection'}
+                {connectionLoadable.state === 'loading' ? 'Connecting...' : 'Retry Connection'}
               </button>
             </div>
 

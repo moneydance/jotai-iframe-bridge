@@ -1,26 +1,30 @@
 import { type createStore, getDefaultStore, Provider } from 'jotai'
 import {
+  type Bridge,
   type ConnectionConfig,
-  createParentBridge,
-  makeParentBridgeHooks,
-  type ParentBridge,
+  createBridge,
+  createBridgeProvider,
 } from 'jotai-iframe-bridge'
 import type { ReactNode } from 'react'
 
 // Define the interfaces for type safety
 interface ParentMethods {
+  // biome-ignore lint/suspicious/noExplicitAny: Method interface needs flexibility for various return types
   [methodName: string]: (...args: any[]) => any
   add: (a: number, b: number) => Promise<number>
 }
 
 interface ChildMethods {
+  // biome-ignore lint/suspicious/noExplicitAny: Method interface needs flexibility for various return types
   [methodName: string]: (...args: any[]) => any
   subtract: (a: number, b: number) => Promise<number>
 }
 
-// Create the default bridge configuration
-const createDefaultBridge = (store?: ReturnType<typeof createStore>) => {
-  const config: ConnectionConfig<ParentMethods> = {
+// Create bridge configuration
+const createDefaultBridge = (
+  store?: ReturnType<typeof createStore>
+): Bridge<ParentMethods, ChildMethods> => {
+  const bridgeConfig: ConnectionConfig<ParentMethods> = {
     allowedOrigins: ['*'],
     methods: {
       add: async (a: number, b: number) => {
@@ -29,47 +33,37 @@ const createDefaultBridge = (store?: ReturnType<typeof createStore>) => {
         return result
       },
     },
-    timeout: 15000,
     log: (...args) => console.log('🚌 Host Bridge:', ...args),
   }
 
-  return createParentBridge<ParentMethods, ChildMethods>(config, store)
+  return createBridge<ParentMethods, ChildMethods>(bridgeConfig, store || getDefaultStore())
 }
 
-// Create default instances for the app
-const defaultStore = getDefaultStore()
-const defaultBridge = createDefaultBridge(defaultStore)
+// Create the unified bridge provider
+const bridgeProvider = createBridgeProvider<ParentMethods, ChildMethods>()
+export const { BridgeProvider, hooks } = bridgeProvider
+export const { useBridge, useRemoteProxy, useConnection } = hooks
 
-// Create the parent bridge hooks using the factory
-export const { ParentBridgeProvider, hooks } = makeParentBridgeHooks<ParentMethods, ChildMethods>(
-  defaultBridge
-)
+// Export the default bridge creator
+export { createDefaultBridge }
 
-// Export the specific hooks for convenience
-export const { useParentBridge, useRemoteProxy, useConnection, useChildReady } = hooks
-
-// Provider component with dependency injection
+// App Provider Component
 interface AppProviderProps {
   children: ReactNode
-  bridge?: ParentBridge<ParentMethods, ChildMethods>
+  bridge?: Bridge<ParentMethods, ChildMethods>
   store?: ReturnType<typeof createStore>
 }
 
-export const AppProvider = ({
-  children,
-  store = defaultStore,
-  bridge = defaultBridge,
-}: AppProviderProps) => {
-  console.log(`🎯 AppProvider using bridge ID: ${bridge.id}`)
+export function AppProvider({ children, bridge, store = getDefaultStore() }: AppProviderProps) {
+  const defaultBridge = bridge || createDefaultBridge()
+  console.log(`🎯 AppProvider using bridge ID: ${defaultBridge.id}`)
 
   return (
     <Provider store={store}>
-      <ParentBridgeProvider bridge={bridge}>{children}</ParentBridgeProvider>
+      <BridgeProvider bridge={defaultBridge}>{children}</BridgeProvider>
     </Provider>
   )
 }
 
-// Export types and utilities
+// Export types for convenience
 export type { ParentMethods, ChildMethods }
-export type { ParentBridge }
-export { createDefaultBridge, defaultStore, defaultBridge }

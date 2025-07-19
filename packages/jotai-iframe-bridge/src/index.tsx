@@ -13,16 +13,13 @@ export type RemoteProxy<T extends Methods> = {
   [K in keyof T]: T[K] extends (...args: infer P) => infer R ? (...args: P) => Promise<R> : never
 }
 
-// Unified base connection configuration
-export interface BaseConnectionConfig<TLocalMethods extends Methods = Methods> {
+// ==================== Configuration Interfaces ====================
+
+export interface ConnectionConfig<TLocalMethods extends Methods = Methods> {
+  allowedOrigins: string[]
   methods?: TLocalMethods
   timeout?: number
   log?: (...args: unknown[]) => void
-}
-
-export interface ConnectionConfig<TLocalMethods extends Methods = Methods>
-  extends BaseConnectionConfig<TLocalMethods> {
-  allowedOrigins: string[]
 }
 
 // Store type from Jotai
@@ -125,6 +122,7 @@ function isReplyMessage(message: Message): message is ReplyMessage {
 }
 
 function getMethodAtMethodPath(methodPath: MethodPath, methods: Methods): Function | undefined {
+  // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
   let current: any = methods
   for (const prop of methodPath) {
     current = current?.[prop]
@@ -137,14 +135,7 @@ function getMethodAtMethodPath(methodPath: MethodPath, methods: Methods): Functi
 
 // ==================== Window Messenger ====================
 
-interface WindowMessenger {
-  sendMessage(message: Message, transferables?: Transferable[]): void
-  addMessageHandler(callback: (message: Message) => void): void
-  removeMessageHandler(callback: (message: Message) => void): void
-  destroy(): void
-}
-
-class WindowMessengerImpl implements WindowMessenger {
+class WindowMessenger {
   private remoteWindow: Window
   private allowedOrigins: (string | RegExp)[]
   private log: ((...args: unknown[]) => void) | undefined
@@ -219,25 +210,14 @@ class WindowMessengerImpl implements WindowMessenger {
       return
     }
 
-    if (!isMessage(data)) {
-      return
-    }
+    if (this.isAllowedOrigin(origin)) {
+      if (!this.concreteRemoteOrigin) {
+        this.concreteRemoteOrigin = origin
+      }
 
-    if (!this.isAllowedOrigin(origin)) {
-      this.log?.(
-        `Received a message from origin \`${origin}\` which did not match ` +
-          `allowed origins \`[${this.allowedOrigins.join(', ')}]\``
-      )
-      return
-    }
-
-    // Set concrete remote origin for both SYN and ACK messages
-    if (isSynMessage(data) || isAck1Message(data) || isAck2Message(data)) {
-      this.concreteRemoteOrigin = origin
-    }
-
-    for (const callback of this.messageCallbacks) {
-      callback(data)
+      if (isMessage(data)) {
+        this.messageCallbacks.forEach((callback) => callback(data))
+      }
     }
   }
 }
@@ -270,14 +250,9 @@ function createDeferred<T>(): Deferred<T> {
   return { promise, resolve, reject, status }
 }
 
-// ==================== Connection Interface ====================
+// ==================== Connection ====================
 
-export interface Connection<T extends Methods = Methods> {
-  promise: Promise<RemoteProxy<T>>
-  destroy: () => void
-}
-
-class ConnectionImpl<T extends Methods = Methods> implements Connection<T> {
+export class Connection<T extends Methods = Methods> {
   public promise: Promise<RemoteProxy<T>>
   private destroyFn: () => void
   private _destroyed = false
@@ -291,10 +266,6 @@ class ConnectionImpl<T extends Methods = Methods> implements Connection<T> {
     if (this._destroyed) return
     this._destroyed = true
     this.destroyFn()
-  }
-
-  get destroyed(): boolean {
-    return this._destroyed
   }
 }
 
@@ -514,6 +485,7 @@ interface HandshakeConfig {
   timeout: number
   log?: (...args: unknown[]) => void
   methods?: Methods
+  // biome-ignore lint/suspicious/noExplicitAny: Generic handshake callback accepts any type of RemoteProxy
   onConnectionEstablished: (remoteProxy: RemoteProxy<any>) => void
   onError: (error: Error) => void
 }
@@ -672,29 +644,36 @@ function createHandshakeHandler<TRemoteMethods extends Methods = Methods>(
   }
 }
 
-// ==================== Reactive Iframe Bridge ====================
+// ==================== Unified Bridge Interface ====================
 
 type LoadableAtom<T> = ReturnType<typeof loadable<T>>
 
-interface ReactiveIframeBridge<TRemoteMethods extends Methods = Methods> {
-  init(remoteWindow: Window): void
+export interface Bridge<
+  _TLocalMethods extends Methods = Methods,
+  TRemoteMethods extends Methods = Methods,
+> {
+  id: string
+  connect(targetWindow?: Window): void
   isInitialized(): boolean
   getConnectionPromise(): Promise<Connection<TRemoteMethods>>
   getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
-  getConnectionAtom(): ReturnType<typeof loadable<Connection<TRemoteMethods>>>
-  getRemoteProxyAtom(): ReturnType<typeof loadable<RemoteProxy<TRemoteMethods>>>
+  getConnectionAtom(): LoadableAtom<Connection<TRemoteMethods>>
+  getRemoteProxyAtom(): LoadableAtom<RemoteProxy<TRemoteMethods>>
   destroy(): void
-  cleanup(): void
   retry(): void
 }
 
-function createReactiveIframeBridge<
+export function createBridge<
   TLocalMethods extends Methods = Methods,
   TRemoteMethods extends Methods = Methods,
 >(
   config: ConnectionConfig<TLocalMethods>,
   store: Store = getDefaultStore()
-): ReactiveIframeBridge<TRemoteMethods> {
+): Bridge<TLocalMethods, TRemoteMethods> {
+  // Generate unique ID for this bridge instance
+  const bridgeId = generateId()
+  config.log?.(`🆔 Creating Bridge with ID: ${bridgeId}`)
+
   // Core atoms
   const remoteWindowAtom = atom<Window | null>(null)
   const participantIdAtom = atom(generateId())
@@ -706,7 +685,7 @@ function createReactiveIframeBridge<
       return null
     }
 
-    const messenger = new WindowMessengerImpl(remoteWindow, config.allowedOrigins, config.log)
+    const messenger = new WindowMessenger(remoteWindow, config.allowedOrigins, config.log)
     return messenger
   })
 
@@ -746,7 +725,7 @@ function createReactiveIframeBridge<
         participantId,
         timeout: handshakeTimeout,
         onConnectionEstablished: (remoteProxy: RemoteProxy<TRemoteMethods>) => {
-          const connection = new ConnectionImpl<TRemoteMethods>(
+          const connection = new Connection<TRemoteMethods>(
             Promise.resolve(remoteProxy),
             () => {} // destroy handled by cleanup
           )
@@ -768,8 +747,16 @@ function createReactiveIframeBridge<
   const unsubscribeFromMessengerChange = updateConnectionOnMessengerChange()
 
   return {
-    init(remoteWindow: Window) {
-      store.set(remoteWindowAtom, remoteWindow)
+    id: bridgeId,
+
+    connect(targetWindow?: Window): void {
+      const window =
+        targetWindow ?? (typeof globalThis !== 'undefined' ? globalThis.parent : undefined)
+      if (!window) {
+        throw new Error('No target window available for connection')
+      }
+      config.log?.(`🚀 Bridge ${bridgeId} connecting to target window`)
+      store.set(remoteWindowAtom, window)
     },
 
     isInitialized(): boolean {
@@ -792,356 +779,82 @@ function createReactiveIframeBridge<
       return remoteProxyAtom
     },
 
+    destroy(): void {
+      config.log?.(`🧹 Bridge ${bridgeId} destroying`)
+      store.set(remoteWindowAtom, null)
+      unsubscribeFromMessengerChange()
+    },
+
     retry(): void {
+      config.log?.(`🔄 Bridge ${bridgeId} retrying connection`)
       const window = store.get(remoteWindowAtom)
       this.destroy()
       if (!window) {
         return
       }
-      this.init(window)
-    },
-
-    destroy(): void {
-      store.set(remoteWindowAtom, null)
-      unsubscribeFromMessengerChange()
-    },
-
-    cleanup(): void {
-      unsubscribeFromMessengerChange()
+      this.connect(window)
     },
   }
 }
 
-// ==================== New Parent/Child Pattern ====================
+// ==================== Unified React Provider ====================
 
-export interface ParentBridge<
-  _TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
-> {
-  id: string
-  init(iframeElement: HTMLIFrameElement): void
-  connect(): void
-  isInitialized(): boolean
-  getConnectionPromise(): Promise<Connection<TRemoteMethods>>
-  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
-  getConnectionAtom(): ReturnType<typeof loadable<Connection<TRemoteMethods>>>
-  getRemoteProxyAtom(): ReturnType<typeof loadable<RemoteProxy<TRemoteMethods>>>
-  getChildReadyAtom(): ReturnType<typeof atom<boolean>>
-  getDebugState(): {
-    hasIframeElement: boolean
-    iframeReady: boolean
-    connectionRequested: boolean
-    connectionState: string
-  }
-  destroy(): void
-  cleanup(): void
-  retry(): void
-}
-
-export interface ChildBridge<
-  _TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
-> {
-  id: string
-  connect(): void
-  isInitialized(): boolean
-  getConnectionPromise(): Promise<Connection<TRemoteMethods>>
-  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
-  getConnectionAtom(): ReturnType<typeof loadable<Connection<TRemoteMethods>>>
-  getRemoteProxyAtom(): ReturnType<typeof loadable<RemoteProxy<TRemoteMethods>>>
-  destroy(): void
-  cleanup(): void
-  retry(): void
-}
-
-export function createParentBridge<
+interface BridgeProviderProps<
   TLocalMethods extends Methods = Methods,
   TRemoteMethods extends Methods = Methods,
->(
-  config: ConnectionConfig<TLocalMethods>,
-  store: Store = getDefaultStore()
-): ParentBridge<TLocalMethods, TRemoteMethods> {
-  // Generate unique ID for this bridge instance
-  const bridgeId = generateId()
-  config.log?.(`🆔 Creating ParentBridge with ID: ${bridgeId}`)
-
-  // Internal atoms for managing iframe state
-  const iframeElementAtom = atom<HTMLIFrameElement | null>(null)
-  const iframeReadyAtom = atom<boolean>(false)
-  const connectionRequestedAtom = atom<boolean>(false)
-
-  // Create underlying reactive bridge
-  const reactiveBridge = createReactiveIframeBridge<TLocalMethods, TRemoteMethods>(config, store)
-
-  // Observe iframe element changes and set up load listeners
-  observe((get, set) => {
-    const iframeElement = get(iframeElementAtom)
-
-    config.log?.(
-      '🔍 Observer: iframeElement changed:',
-      iframeElement ? 'HTMLIFrameElement set' : 'null'
-    )
-
-    if (!iframeElement) {
-      config.log?.('🔍 Observer: Setting iframeReadyAtom to false (no iframe element)')
-      set(iframeReadyAtom, false)
-      return
-    }
-
-    const handleLoad = () => {
-      config.log?.('🎉 Load event fired! Setting iframeReadyAtom to true')
-      set(iframeReadyAtom, true)
-      config.log?.('Iframe loaded and ready for connection')
-    }
-
-    config.log?.('🔧 Observer: Adding load event listener to iframe')
-    iframeElement.addEventListener('load', handleLoad, { once: true })
-
-    // Return cleanup function to remove listener if iframe element changes
-    return () => {
-      config.log?.('🧹 Observer cleanup: Removing load event listener')
-      iframeElement.removeEventListener('load', handleLoad)
-    }
-  }, store)
-
-  // Effect to connect the reactive bridge when iframe is ready and connection is requested
-  observe((get) => {
-    const iframeElement = get(iframeElementAtom)
-    const iframeReady = get(iframeReadyAtom)
-    const connectionRequested = get(connectionRequestedAtom)
-
-    config.log?.('📊 Messenger check:', {
-      hasIframeElement: !!iframeElement,
-      hasContentWindow: !!iframeElement?.contentWindow,
-      iframeReady,
-      connectionRequested,
-    })
-
-    if (!iframeElement?.contentWindow || !iframeReady || !connectionRequested) {
-      config.log?.('❌ Messenger not ready - returning null')
-      return
-    }
-
-    config.log?.('🎯 Creating WindowMessenger - all conditions met!')
-    // Initialize the reactive bridge with the iframe's content window
-    reactiveBridge.init(iframeElement.contentWindow)
-  }, store)
-
-  return {
-    id: bridgeId,
-    init(iframeElement: HTMLIFrameElement) {
-      config.log?.(
-        `🚀 Bridge ${bridgeId} init() called with iframe element:`,
-        iframeElement.tagName,
-        iframeElement.src
-      )
-      store.set(iframeElementAtom, iframeElement)
-      config.log?.(`✅ Bridge ${bridgeId} init() complete - iframeElementAtom set`)
-    },
-
-    connect() {
-      config.log?.(`🔗 Bridge ${bridgeId} connect() called`)
-      store.set(connectionRequestedAtom, true)
-      config.log?.(`Parent bridge ${bridgeId} connect() called, waiting for iframe ready state`)
-    },
-
-    isInitialized: () => reactiveBridge.isInitialized(),
-    getConnectionPromise: () => reactiveBridge.getConnectionPromise(),
-    getRemoteProxyPromise: () => reactiveBridge.getRemoteProxyPromise(),
-    getConnectionAtom: () => reactiveBridge.getConnectionAtom(),
-    getRemoteProxyAtom: () => reactiveBridge.getRemoteProxyAtom(),
-
-    getChildReadyAtom(): ReturnType<typeof atom<boolean>> {
-      return iframeReadyAtom
-    },
-
-    // Debug method to check current state
-    getDebugState() {
-      const currentState = {
-        hasIframeElement: !!store.get(iframeElementAtom),
-        iframeReady: store.get(iframeReadyAtom),
-        connectionRequested: store.get(connectionRequestedAtom),
-        connectionState: store.get(reactiveBridge.getConnectionAtom()).state,
-      }
-      config.log?.('🐛 Debug state:', currentState)
-      return currentState
-    },
-
-    retry: () => reactiveBridge.retry(),
-
-    destroy(): void {
-      store.set(iframeElementAtom, null)
-      store.set(iframeReadyAtom, false)
-      store.set(connectionRequestedAtom, false)
-      reactiveBridge.destroy()
-    },
-
-    cleanup: () => reactiveBridge.cleanup(),
-  }
-}
-
-export function createChildBridge<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
->(
-  config: ConnectionConfig<TLocalMethods>,
-  store?: Store
-): ChildBridge<TLocalMethods, TRemoteMethods> {
-  // Generate unique ID for this bridge instance
-  const bridgeId = generateId()
-  config.log?.(`🆔 Creating ChildBridge with ID: ${bridgeId}`)
-
-  const internalBridge = createReactiveIframeBridge<TLocalMethods, TRemoteMethods>(config, store)
-
-  return {
-    id: bridgeId,
-    connect: () => {
-      // Child initiates connection to parent immediately
-      internalBridge.init(window.parent)
-      config.log?.(`Child bridge ${bridgeId} connect() called, connecting to parent`)
-    },
-    isInitialized: () => internalBridge.isInitialized(),
-    getConnectionPromise: () => internalBridge.getConnectionPromise(),
-    getRemoteProxyPromise: () => internalBridge.getRemoteProxyPromise(),
-    getConnectionAtom: () => internalBridge.getConnectionAtom(),
-    getRemoteProxyAtom: () => internalBridge.getRemoteProxyAtom(),
-    destroy: () => internalBridge.destroy(),
-    cleanup: () => internalBridge.cleanup(),
-    retry: () => internalBridge.retry(),
-  }
-}
-
-// ==================== React Integration ====================
-
-export interface IframeBridgeProviderProps {
+> {
+  bridge: Bridge<TLocalMethods, TRemoteMethods>
   children: ReactNode
 }
 
-export interface ParentBridgeProviderProps<
+export type { BridgeProviderProps }
+
+interface BridgeContextValue<
   TLocalMethods extends Methods = Methods,
   TRemoteMethods extends Methods = Methods,
-> extends IframeBridgeProviderProps {
-  bridge?: ParentBridge<TLocalMethods, TRemoteMethods>
+> {
+  bridge: Bridge<TLocalMethods, TRemoteMethods>
 }
 
-export interface ChildBridgeProviderProps<
+export function createBridgeProvider<
   TLocalMethods extends Methods = Methods,
   TRemoteMethods extends Methods = Methods,
-> extends IframeBridgeProviderProps {
-  bridge?: ChildBridge<TLocalMethods, TRemoteMethods>
-}
+>() {
+  const BridgeContext = createContext<
+    BridgeContextValue<TLocalMethods, TRemoteMethods> | undefined
+  >(undefined)
 
-export function makeParentBridgeHooks<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
->(defaultBridge: ParentBridge<TLocalMethods, TRemoteMethods>) {
-  interface ParentBridgeContextValue {
-    bridge: ParentBridge<TLocalMethods, TRemoteMethods>
-  }
-
-  const ParentBridgeContext = createContext<ParentBridgeContextValue | null>(null)
-
-  const ParentBridgeProvider = ({
+  function BridgeProvider({
+    bridge,
     children,
-    bridge = defaultBridge,
-  }: ParentBridgeProviderProps<TLocalMethods, TRemoteMethods>) => {
-    const contextValue: ParentBridgeContextValue = {
-      bridge,
-    }
-
-    return (
-      <ParentBridgeContext.Provider value={contextValue}>{children}</ParentBridgeContext.Provider>
-    )
+  }: BridgeProviderProps<TLocalMethods, TRemoteMethods>) {
+    return <BridgeContext.Provider value={{ bridge }}>{children}</BridgeContext.Provider>
   }
 
-  function useParentBridge(): ParentBridge<TLocalMethods, TRemoteMethods> {
-    const context = useContext(ParentBridgeContext)
-
+  function useBridge(): Bridge<TLocalMethods, TRemoteMethods> {
+    const context = useContext(BridgeContext)
     if (!context) {
-      throw new Error('useParentBridge must be used within a ParentBridgeProvider')
+      throw new Error('useBridge must be used within a BridgeProvider')
     }
-
     return context.bridge
   }
 
   function useRemoteProxy() {
-    const bridge = useParentBridge()
+    const bridge = useBridge()
     const remoteProxyAtom = bridge.getRemoteProxyAtom()
     return useAtomValue(remoteProxyAtom)
   }
 
   function useConnection() {
-    const bridge = useParentBridge()
-    const connectionAtom = bridge.getConnectionAtom()
-    return useAtomValue(connectionAtom)
-  }
-
-  function useChildReady() {
-    const bridge = useParentBridge()
-    const childReadyAtom = bridge.getChildReadyAtom()
-    return useAtomValue(childReadyAtom)
-  }
-
-  return {
-    ParentBridgeProvider,
-    hooks: {
-      useParentBridge,
-      useRemoteProxy,
-      useConnection,
-      useChildReady,
-    },
-  }
-}
-
-export function makeChildBridgeHooks<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
->(defaultBridge: ChildBridge<TLocalMethods, TRemoteMethods>) {
-  interface ChildBridgeContextValue {
-    bridge: ChildBridge<TLocalMethods, TRemoteMethods>
-  }
-
-  const ChildBridgeContext = createContext<ChildBridgeContextValue | null>(null)
-
-  const ChildBridgeProvider = ({
-    children,
-    bridge = defaultBridge,
-  }: ChildBridgeProviderProps<TLocalMethods, TRemoteMethods>) => {
-    const contextValue: ChildBridgeContextValue = {
-      bridge,
-    }
-
-    return (
-      <ChildBridgeContext.Provider value={contextValue}>{children}</ChildBridgeContext.Provider>
-    )
-  }
-
-  function useChildBridge(): ChildBridge<TLocalMethods, TRemoteMethods> {
-    const context = useContext(ChildBridgeContext)
-
-    if (!context) {
-      throw new Error('useChildBridge must be used within a ChildBridgeProvider')
-    }
-
-    return context.bridge
-  }
-
-  function useRemoteProxy() {
-    const bridge = useChildBridge()
-    const remoteProxyAtom = bridge.getRemoteProxyAtom()
-    return useAtomValue(remoteProxyAtom)
-  }
-
-  function useConnection() {
-    const bridge = useChildBridge()
+    const bridge = useBridge()
     const connectionAtom = bridge.getConnectionAtom()
     return useAtomValue(connectionAtom)
   }
 
   return {
-    ChildBridgeProvider,
+    BridgeProvider,
     hooks: {
-      useChildBridge,
+      useBridge,
       useRemoteProxy,
       useConnection,
     },

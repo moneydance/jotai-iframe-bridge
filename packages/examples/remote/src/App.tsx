@@ -1,62 +1,69 @@
-import { type ConnectionConfig, createChildBridge, type RemoteProxy } from 'jotai-iframe-bridge'
+import { type ConnectionConfig, createBridge, type RemoteProxy } from 'jotai-iframe-bridge'
 import { useEffect, useState } from 'react'
 
 // Simplified interfaces
 interface ParentMethods {
+  // biome-ignore lint/suspicious/noExplicitAny: Method interface needs flexibility for various return types
   [methodName: string]: (...args: any[]) => any
   add: (a: number, b: number) => Promise<number>
 }
 
 interface ChildMethods {
+  // biome-ignore lint/suspicious/noExplicitAny: Method interface needs flexibility for various return types
   [methodName: string]: (...args: any[]) => any
   subtract: (a: number, b: number) => Promise<number>
 }
 
 // Create bridge instance
-const createBridge = () => {
-  const config: ConnectionConfig<ChildMethods> = {
+const createBridgeInstance = () => {
+  const bridgeConfig: ConnectionConfig<ChildMethods> = {
     allowedOrigins: ['*'],
     methods: {
       subtract: async (a: number, b: number) => {
         const result = a - b
-        console.log(`Remote: ${a} - ${b} = ${result}`)
+        console.log(`Child: ${a} - ${b} = ${result}`)
         return result
       },
     },
-    timeout: 15000,
-    log: (...args) => console.log('🚌 Child Bridge:', ...args),
+    // biome-ignore lint/suspicious/noExplicitAny: Console.log accepts any arguments
+    log: (...args: any[]) => console.log('🚌 Child Bridge:', ...args),
   }
 
-  return createChildBridge<ChildMethods, ParentMethods>(config)
+  return createBridge<ChildMethods, ParentMethods>(bridgeConfig)
 }
 
 function App() {
-  const [bridge] = useState(() => createBridge())
+  const [bridge] = useState(() => createBridgeInstance())
   const [parentProxy, setParentProxy] = useState<RemoteProxy<ParentMethods> | null>(null)
   const [connectionStatus, setConnectionStatus] = useState<
-    'disconnected' | 'connecting' | 'connected'
+    'disconnected' | 'connecting' | 'connected' | 'error'
   >('disconnected')
+  const [_errorMessage, setErrorMessage] = useState<string>('')
   const [result, setResult] = useState<number | null>(null)
   const [numberA, setNumberA] = useState<number>(15)
   const [numberB, setNumberB] = useState<number>(7)
 
+  // Auto-connect when bridge is created
   useEffect(() => {
     setConnectionStatus('connecting')
 
-    // Connect to parent using new bridge pattern
+    // Connect to parent (no parameters defaults to window.parent)
     bridge.connect()
 
-    bridge
-      .getRemoteProxyPromise()
-      .then((proxy) => {
-        console.log('✅ Child connection established!')
+    const setupConnection = async () => {
+      try {
+        const proxy = await bridge.getRemoteProxyPromise()
         setParentProxy(proxy)
         setConnectionStatus('connected')
-      })
-      .catch((error) => {
+        console.log('✅ Child connection established!')
+      } catch (error: unknown) {
+        setConnectionStatus('error')
+        setErrorMessage(error instanceof Error ? error.message : 'Unknown error')
         console.error('❌ Child connection failed:', error)
-        setConnectionStatus('disconnected')
-      })
+      }
+    }
+
+    setupConnection()
   }, [bridge])
 
   const testAddition = async () => {
