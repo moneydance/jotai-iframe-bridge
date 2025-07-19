@@ -25,11 +25,15 @@ export type SynMessage = MessageBase & {
 
 export type Ack1Message = MessageBase & {
   type: 'ACK1'
+  fromParticipantId: string // Child's participant ID
+  toParticipantId: string // Host's participant ID (from SYN)
   methodPaths?: string[]
 }
 
 export type Ack2Message = MessageBase & {
   type: 'ACK2'
+  fromParticipantId: string // Host's participant ID
+  toParticipantId: string // Child's participant ID (from ACK1)
 }
 
 export type CallMessage = MessageBase & {

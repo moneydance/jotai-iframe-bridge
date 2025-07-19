@@ -1,11 +1,13 @@
-import { safeAssignment } from 'jotai-iframe-bridge'
+import { type LazyLoadable, safeAssignment } from 'jotai-iframe-bridge'
 import { useCallback, useEffect, useState } from 'react'
 import { useBridge, useRemoteProxy } from '../Provider'
 
 // Helper component for connection status display
-function ConnectionStatus({ state }: { state: string }) {
+function ConnectionStatus({ state }: { state: LazyLoadable<unknown>['state'] }) {
   const getStatusColor = () => {
     switch (state) {
+      case 'uninitialized':
+        return 'bg-gray-500'
       case 'hasData':
         return 'bg-green-500'
       case 'loading':
@@ -17,12 +19,14 @@ function ConnectionStatus({ state }: { state: string }) {
 
   const getStatusText = () => {
     switch (state) {
+      case 'uninitialized':
+        return 'disconnected'
       case 'hasData':
         return 'connected'
       case 'loading':
         return 'connecting'
       default:
-        return 'disconnected'
+        return 'error'
     }
   }
 

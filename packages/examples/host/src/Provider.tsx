@@ -1,4 +1,4 @@
-import { type createStore, getDefaultStore, Provider } from 'jotai'
+import { Provider, type createStore, getDefaultStore } from 'jotai'
 import {
   type Bridge,
   type ConnectionConfig,

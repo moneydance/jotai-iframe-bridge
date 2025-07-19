@@ -1,6 +1,9 @@
 // biome-ignore lint/style/useImportType: loadable type interface is not exported
-import { loadable } from 'jotai/utils'
+
+import type { Atom } from 'jotai'
+import type { loadable } from 'jotai/utils'
 import type { Methods, RemoteProxy } from '../connection/types'
+import type { LazyLoadable } from '../utils/lazyLoadable'
 
 // ==================== Bridge Configuration ====================
 
@@ -25,7 +28,7 @@ export interface Bridge<
   id: string
   connect(targetWindow?: Window): void
   isConnected(): boolean
-  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>>
-  getRemoteProxyAtom(): LoadableAtom<RemoteProxy<TRemoteMethods>>
+  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> | null
+  getRemoteProxyAtom(): Atom<LazyLoadable<RemoteProxy<TRemoteMethods>>>
   reset(): void
 }

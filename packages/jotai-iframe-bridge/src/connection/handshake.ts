@@ -22,6 +22,7 @@ interface HandshakeState {
   callHandlerDestroy: (() => void) | null
   remoteProxyDestroy: (() => void) | null
   messageHandler: ((message: Message) => void) | null
+  pairedParticipantId: string | null // Track who we're paired with
 }
 
 // ==================== Message Handlers ====================
@@ -29,11 +30,23 @@ interface HandshakeState {
 function handleSynMessage<_TRemoteMethods extends Methods>(
   message: SynMessage,
   config: HandshakeConfig,
-  _state: HandshakeState
+  state: HandshakeState
 ): void {
   const { messenger, participantId, log } = config
 
   log?.('Received SYN message from participant:', message.participantId)
+
+  // If we don't have a paired participant yet, pair with this one
+  if (!state.pairedParticipantId) {
+    state.pairedParticipantId = message.participantId
+    log?.(`Paired with participant: ${message.participantId}`)
+  } else if (state.pairedParticipantId !== message.participantId) {
+    // Ignore SYN from different participants - we're already paired
+    log?.(
+      `Ignoring SYN from ${message.participantId}, already paired with ${state.pairedParticipantId}`
+    )
+    return
+  }
 
   // Send another SYN in case the other participant wasn't ready for our first one
   const synMessage: SynMessage = {
@@ -54,18 +67,25 @@ function handleSynMessage<_TRemoteMethods extends Methods>(
   log?.(`Leadership check: ${participantId} > ${message.participantId} = ${isHandshakeLeader}`)
 
   if (isHandshakeLeader) {
-    sendAck1Message(config)
+    sendAck1Message(config, state)
   }
   // If not leader, wait for ACK1 from the leader
 }
 
-function sendAck1Message(config: HandshakeConfig): void {
-  const { messenger, log, onError } = config
+function sendAck1Message(config: HandshakeConfig, state: HandshakeState): void {
+  const { messenger, participantId, log, onError } = config
+
+  if (!state.pairedParticipantId) {
+    onError(new Error('Cannot send ACK1: no paired participant'))
+    return
+  }
 
   // We are the leader, send ACK1
   const ack1Message: Ack1Message = {
     namespace: NAMESPACE,
     type: 'ACK1',
+    fromParticipantId: participantId,
+    toParticipantId: state.pairedParticipantId,
   }
 
   const [ack1Ok, ack1Error] = safeAssignment(() => messenger.sendMessage(ack1Message))
@@ -82,11 +102,33 @@ function sendAck1Message(config: HandshakeConfig): void {
 }
 
 function handleAck1Message<TRemoteMethods extends Methods>(
-  _message: Ack1Message,
+  message: Ack1Message,
   config: HandshakeConfig,
   state: HandshakeState
 ): void {
-  const { messenger, log, onError } = config
+  const { messenger, participantId, log, onError } = config
+
+  // Check if this ACK1 is meant for us
+  if (message.toParticipantId !== participantId) {
+    log?.(
+      `Ignoring ACK1 not meant for us (to: ${message.toParticipantId}, our ID: ${participantId})`
+    )
+    return
+  }
+
+  // Check if we're paired with the sender
+  if (state.pairedParticipantId && state.pairedParticipantId !== message.fromParticipantId) {
+    log?.(
+      `Ignoring ACK1 from unpaired participant ${message.fromParticipantId}, paired with ${state.pairedParticipantId}`
+    )
+    return
+  }
+
+  // If not paired yet, pair with the sender
+  if (!state.pairedParticipantId) {
+    state.pairedParticipantId = message.fromParticipantId
+    log?.(`Paired with participant: ${message.fromParticipantId}`)
+  }
 
   log?.('Received ACK1 message, sending ACK2 response')
 
@@ -94,6 +136,8 @@ function handleAck1Message<TRemoteMethods extends Methods>(
   const ack2Message: Ack2Message = {
     namespace: NAMESPACE,
     type: 'ACK2',
+    fromParticipantId: participantId,
+    toParticipantId: message.fromParticipantId,
   }
 
   const [ack2Ok, ack2Error] = safeAssignment(() => messenger.sendMessage(ack2Message))
@@ -114,11 +158,27 @@ function handleAck1Message<TRemoteMethods extends Methods>(
 }
 
 function handleAck2Message<TRemoteMethods extends Methods>(
-  _message: Ack2Message,
+  message: Ack2Message,
   config: HandshakeConfig,
   state: HandshakeState
 ): void {
-  const { log } = config
+  const { participantId, log } = config
+
+  // Check if this ACK2 is meant for us
+  if (message.toParticipantId !== participantId) {
+    log?.(
+      `Ignoring ACK2 not meant for us (to: ${message.toParticipantId}, our ID: ${participantId})`
+    )
+    return
+  }
+
+  // Check if we're paired with the sender
+  if (state.pairedParticipantId !== message.fromParticipantId) {
+    log?.(
+      `Ignoring ACK2 from unpaired participant ${message.fromParticipantId}, paired with ${state.pairedParticipantId}`
+    )
+    return
+  }
 
   log?.('Received ACK2 message, establishing connection')
 
@@ -214,6 +274,7 @@ export function createHandshakeHandler<TRemoteMethods extends Methods = Methods>
     callHandlerDestroy: null,
     remoteProxyDestroy: null,
     messageHandler: null,
+    pairedParticipantId: null,
   }
 
   // Set up call handler for incoming method calls

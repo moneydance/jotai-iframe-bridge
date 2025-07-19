@@ -1,5 +1,4 @@
-import type { Loadable } from 'jotai/vanilla/utils/loadable'
-import { safeAssignment } from 'jotai-iframe-bridge'
+import type { LazyLoadable } from 'jotai-iframe-bridge'
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useBridge, useRemoteProxy } from '../Provider'
 
@@ -8,12 +7,22 @@ export const REMOTE_URL = 'http://localhost:5174'
 
 // Connection Status Helper Component
 type ConnectionStatusProps = {
-  state: Loadable<unknown>['state']
+  state: LazyLoadable<unknown>['state']
   className?: string
 }
 
 function ConnectionStatus({ state, className = '' }: ConnectionStatusProps) {
   switch (state) {
+    case 'uninitialized':
+      return (
+        <span
+          className={`px-3 py-1 rounded-full text-white text-sm bg-gray-500 ${className}`}
+          data-testid="connection-status"
+          data-status="disconnected"
+        >
+          disconnected
+        </span>
+      )
     case 'hasData':
       return (
         <span
@@ -49,9 +58,9 @@ function ConnectionStatus({ state, className = '' }: ConnectionStatusProps) {
         <span
           className={`px-3 py-1 rounded-full text-white text-sm bg-red-500 ${className}`}
           data-testid="connection-status"
-          data-status="disconnected"
+          data-status="unknown"
         >
-          disconnected
+          unknown
         </span>
       )
   }
@@ -196,7 +205,6 @@ const IframeContainer = memo(
     setIframeElement: (element: HTMLIFrameElement | null) => void
   }) => {
     const bridge = useBridge()
-    const remoteProxyLoadable = useRemoteProxy()
 
     // Handle iframe initialization when element becomes available and loaded
     useEffect(() => {
@@ -204,31 +212,15 @@ const IframeContainer = memo(
         return
       }
 
-      // If already connected, don't reconnect
-      if (remoteProxyLoadable.state === 'hasData') {
-        return
-      }
-
       console.log(`🚀 Connecting bridge [${bridge.id}] to iframe content window`)
 
       const contentWindow = iframeElement.contentWindow
-      const [ok, error] = safeAssignment(() => {
-        bridge.connect(contentWindow)
-      })
-      if (!ok) {
-        console.error(`Bridge connection failed [${bridge.id}]:`, error)
-        return
-      }
+      bridge.connect(contentWindow)
 
       return () => {
-        const [resetOk, resetError] = safeAssignment(() => {
-          bridge.reset()
-        })
-        if (!resetOk) {
-          console.error(`Bridge reset failed [${bridge.id}]:`, resetError)
-        }
+        bridge.reset()
       }
-    }, [bridge, remoteProxyLoadable.state, iframeElement?.contentWindow])
+    }, [bridge, iframeElement?.contentWindow])
 
     const handleIframeRef = useCallback(
       (element: HTMLIFrameElement | null) => {
