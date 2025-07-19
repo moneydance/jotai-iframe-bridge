@@ -410,7 +410,25 @@ test/
 #### Import/Export Patterns
 - **Related imports together** - When you import a type, you likely need its type guards too
 - **Module-based exports** - Main `index.tsx` should export from organized modules, not individual files
-- **Prefer named exports** over default exports for better tree-shaking
+- **Always use named exports, avoid default exports** - Default exports aren't named, making refactoring harder and reducing IDE support
+
+```typescript
+// ✅ Good - Named exports are explicit and refactor-friendly
+export const createBridge = () => { /* ... */ }
+export const Bridge = () => { /* ... */ }
+export type BridgeConfig = { /* ... */ }
+
+// Import with clear names
+import { createBridge, Bridge, type BridgeConfig } from './bridge'
+
+// ❌ Avoid - Default exports lose their names
+export default function() { /* ... */ }  // What is this function called?
+export default Bridge                    // Name only exists at import site
+
+// Imports are ambiguous and harder to refactor
+import SomeArbitraryName from './bridge'  // Could be anything
+import Bridge from './bridge'             // Name doesn't survive refactoring
+```
 
 #### Anti-Patterns to Avoid
 ```typescript

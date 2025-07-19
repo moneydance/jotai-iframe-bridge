@@ -9,13 +9,13 @@ import {
   type ParentMethods,
 } from '../../src/Provider'
 
-// Test context options
-interface RenderAppOptions {
+// Test context options (converted from interface to type)
+type RenderAppOptions = {
   bridge?: Bridge<ParentMethods, ChildMethods>
   store?: ReturnType<typeof createStore>
 }
 
-// Test context component
+// Test context component with improved typing
 const TestAppContext = ({
   children,
   bridge,
@@ -32,8 +32,8 @@ const TestAppContext = ({
   )
 }
 
-// Return type for renderApp
-interface RenderAppResult extends RenderResult {
+// Return type for renderApp (converted from interface to type)
+type RenderAppResult = RenderResult & {
   testBridge: Bridge<ParentMethods, ChildMethods>
   testStore: ReturnType<typeof createStore>
 }

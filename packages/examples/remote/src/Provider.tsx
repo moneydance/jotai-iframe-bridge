@@ -8,26 +8,26 @@ import {
 import type { ReactNode } from 'react'
 
 // Define strict types for type safety (converted from interfaces)
-type ParentMethods = {
-  add: (a: number, b: number) => Promise<number>
-}
-
 type ChildMethods = {
   subtract: (a: number, b: number) => Promise<number>
 }
 
+type ParentMethods = {
+  add: (a: number, b: number) => Promise<number>
+}
+
 // Create bridge configuration factory with ReturnType pattern
-function createBridgeConfig(): ConnectionConfig<ParentMethods> {
+function createBridgeConfig(): ConnectionConfig<ChildMethods> {
   return {
     allowedOrigins: ['*'],
     methods: {
-      add: async (a: number, b: number) => {
-        const result = a + b
-        console.log(`Host: ${a} + ${b} = ${result}`)
+      subtract: async (a: number, b: number) => {
+        const result = a - b
+        console.log(`Child: ${a} - ${b} = ${result}`)
         return result
       },
     },
-    log: (...args: unknown[]) => console.log('🚌 Host Bridge:', ...args),
+    log: (...args: unknown[]) => console.log('🚌 Child Bridge:', ...args),
   }
 }
 
@@ -36,13 +36,13 @@ type BridgeConfig = ReturnType<typeof createBridgeConfig>
 // Create bridge with improved typing
 const createDefaultBridge = (
   store?: ReturnType<typeof createStore>
-): Bridge<ParentMethods, ChildMethods> => {
+): Bridge<ChildMethods, ParentMethods> => {
   const bridgeConfig = createBridgeConfig()
-  return createBridge<ParentMethods, ChildMethods>(bridgeConfig, store || getDefaultStore())
+  return createBridge<ChildMethods, ParentMethods>(bridgeConfig, store || getDefaultStore())
 }
 
 // Create the unified bridge provider
-const bridgeProvider = createBridgeProvider<ParentMethods, ChildMethods>()
+const bridgeProvider = createBridgeProvider<ChildMethods, ParentMethods>()
 export const { BridgeProvider, hooks } = bridgeProvider
 export const { useBridge, useRemoteProxy } = hooks
 
@@ -52,7 +52,7 @@ export { createDefaultBridge }
 // App Provider Component with improved typing
 type AppProviderProps = {
   children: ReactNode
-  bridge?: Bridge<ParentMethods, ChildMethods>
+  bridge?: Bridge<ChildMethods, ParentMethods>
   store?: ReturnType<typeof createStore>
 }
 

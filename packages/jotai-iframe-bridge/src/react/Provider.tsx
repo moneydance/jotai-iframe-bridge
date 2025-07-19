@@ -49,18 +49,11 @@ export function createBridgeProvider<
     return useAtomValue(remoteProxyAtom)
   }
 
-  function useConnection() {
-    const bridge = useBridge()
-    const connectionAtom = bridge.getConnectionAtom()
-    return useAtomValue(connectionAtom)
-  }
-
   return {
     BridgeProvider,
     hooks: {
       useBridge,
       useRemoteProxy,
-      useConnection,
     },
   }
 }

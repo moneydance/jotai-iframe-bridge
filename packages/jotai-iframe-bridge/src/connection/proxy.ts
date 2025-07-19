@@ -22,7 +22,7 @@ function getMethodAtMethodPath(
   // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
   methods: Record<string, any>
   // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
-): (...args: any[]) => any | undefined {
+): ((...args: any[]) => any) | undefined {
   // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
   let current: any = methods
   for (const prop of methodPath) {
@@ -50,13 +50,18 @@ export function createRemoteProxy<T extends Methods>(
     {
       get(_target, prop: string) {
         if (prop === 'then') {
-          // If we're here it means someone called then() on a remote function path
-          // This is the terminating condition when someone does await remoteProxy.foo.bar()
-          throw new Error(
-            `Remote function ${formatMethodPath(
-              path
-            )} was accessed but not called. Did you forget to add () at the end?`
-          )
+          // Only throw error if we're deep in a method path (not the root proxy)
+          // This allows Promise.resolve(remoteProxy) to work while still catching
+          // mistakes like await remoteProxy.methodName (without calling it)
+          if (path.length > 0) {
+            throw new Error(
+              `Remote function ${formatMethodPath(
+                path
+              )} was accessed but not called. Did you forget to add () at the end?`
+            )
+          }
+          // Return undefined for root proxy to indicate it's not thenable
+          return undefined
         }
 
         if (typeof prop === 'string') {
@@ -65,8 +70,8 @@ export function createRemoteProxy<T extends Methods>(
 
         return undefined
       },
-      apply() {
-        return callback(path, [...arguments].slice(2))
+      apply(_target, _thisArg, args: unknown[]) {
+        return callback(path, args)
       },
     }
   ) as RemoteProxy<T>

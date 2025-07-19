@@ -1,7 +1,6 @@
 import { atom, getDefaultStore } from 'jotai'
 import { loadable } from 'jotai/utils'
 import { observe } from 'jotai-effect'
-import { Connection } from '../connection/Connection'
 import { createHandshakeHandler } from '../connection/handshake'
 import { WindowMessenger } from '../connection/messaging'
 import type { Methods, RemoteProxy } from '../connection/types'
@@ -29,26 +28,19 @@ function createBridgeAtoms<TRemoteMethods extends Methods>(config: ConnectionCon
     return messenger
   })
 
-  // Connection state atoms
-  const connectionDeferredAtom = atom(createDeferred<Connection<TRemoteMethods>>())
-  const connectionPromiseAtom = atom(async (get) => get(connectionDeferredAtom).promise)
-  const remoteProxyPromiseAtom = atom(async (get) => {
-    const connection = await get(connectionPromiseAtom)
-    return connection.promise
-  })
+  // Only remote proxy atoms - connection status is derived from this
+  const remoteProxyDeferredAtom = atom(createDeferred<RemoteProxy<TRemoteMethods>>())
+  const remoteProxyPromiseAtom = atom(async (get) => get(remoteProxyDeferredAtom).promise)
 
-  // Loadable atoms for React integration
-  const connectionAtom = loadable(connectionPromiseAtom)
+  // Loadable atom for React integration
   const remoteProxyAtom = loadable(remoteProxyPromiseAtom)
 
   return {
     remoteWindowAtom,
     participantIdAtom,
     messengerAtom,
-    connectionDeferredAtom,
-    connectionPromiseAtom,
+    remoteProxyDeferredAtom,
     remoteProxyPromiseAtom,
-    connectionAtom,
     remoteProxyAtom,
   }
 }
@@ -69,9 +61,9 @@ function createConnectionEffect<TRemoteMethods extends Methods>(
 
     if (!messenger) {
       // Reset connection when messenger is null
-      const connectionDeferred = get.peek(atoms.connectionDeferredAtom)
-      if (connectionDeferred.status !== 'pending') {
-        set(atoms.connectionDeferredAtom, createDeferred<Connection<TRemoteMethods>>())
+      const remoteProxyDeferred = get.peek(atoms.remoteProxyDeferredAtom)
+      if (remoteProxyDeferred.status !== 'pending') {
+        set(atoms.remoteProxyDeferredAtom, createDeferred<RemoteProxy<TRemoteMethods>>())
       }
       return
     }
@@ -86,14 +78,10 @@ function createConnectionEffect<TRemoteMethods extends Methods>(
       participantId,
       timeout: handshakeTimeout,
       onConnectionEstablished: (remoteProxy: RemoteProxy<TRemoteMethods>) => {
-        const connection = new Connection<TRemoteMethods>(
-          Promise.resolve(remoteProxy),
-          () => {} // destroy handled by cleanup
-        )
-        get.peek(atoms.connectionDeferredAtom).resolve(connection)
+        get.peek(atoms.remoteProxyDeferredAtom).resolve(remoteProxy)
       },
       onError: (error: Error) => {
-        get.peek(atoms.connectionDeferredAtom).reject(error)
+        get.peek(atoms.remoteProxyDeferredAtom).reject(error)
       },
     })
 
@@ -139,19 +127,11 @@ export function createBridge<
     },
 
     isInitialized(): boolean {
-      return store.get(atoms.connectionAtom).state === 'hasData'
-    },
-
-    getConnectionPromise(): Promise<Connection<TRemoteMethods>> {
-      return store.get(atoms.connectionPromiseAtom)
+      return store.get(atoms.remoteProxyAtom).state === 'hasData'
     },
 
     getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> {
       return store.get(atoms.remoteProxyPromiseAtom)
-    },
-
-    getConnectionAtom(): LoadableAtom<Connection<TRemoteMethods>> {
-      return atoms.connectionAtom
     },
 
     getRemoteProxyAtom(): LoadableAtom<RemoteProxy<TRemoteMethods>> {

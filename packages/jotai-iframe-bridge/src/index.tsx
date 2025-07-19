@@ -1,10 +1,7 @@
-// ==================== Core Connection Types ====================
-
-export { createBridge } from './bridge/Bridge'
 // ==================== Bridge ====================
+export { createBridge } from './bridge/Bridge'
 export type { Bridge, ConnectionConfig, LoadableAtom } from './bridge/types'
 // ==================== Connection ====================
-export { Connection } from './connection/Connection'
 export type {
   Ack1Message,
   Ack2Message,
@@ -17,7 +14,8 @@ export type {
   ReplyMessage,
   SynMessage,
 } from './connection/types'
-
 // ==================== React Provider ====================
 export type { BridgeProviderProps } from './react/Provider'
 export { createBridgeProvider } from './react/Provider'
+// ==================== Utils ====================
+export * from './utils'

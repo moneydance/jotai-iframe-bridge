@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { createStore } from 'jotai'
 import type { Bridge } from 'jotai-iframe-bridge'
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest'
-import { AppContent, REMOTE_URL } from '../src/Content'
+import { AppContent, REMOTE_URL } from '../src/components/Content'
 import type { ChildMethods, ParentMethods } from '../src/Provider'
 import { createDefaultBridge, renderApp } from './utilities/renderApp'
 
