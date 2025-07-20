@@ -10,10 +10,12 @@ export class WindowMessenger {
   private concreteRemoteOrigin?: string
   private messageCallbacks = new Set<(message: Message) => void>()
   private destroyed = false
+  private participantId: string
 
   constructor(
     remoteWindow: Window,
     allowedOrigins: (string | RegExp)[],
+    participantId: string,
     log?: (...args: unknown[]) => void
   ) {
     if (!remoteWindow) {
@@ -22,6 +24,7 @@ export class WindowMessenger {
 
     this.remoteWindow = remoteWindow
     this.allowedOrigins = allowedOrigins.length ? allowedOrigins : [window.origin]
+    this.participantId = participantId
     this.log = log
 
     window.addEventListener('message', this.handleMessageFromRemoteWindow)
@@ -92,13 +95,6 @@ export class WindowMessenger {
   }
 
   private handleMessageFromRemoteWindow = ({ origin, data }: MessageEvent): void => {
-    this.log?.('🔔 Received message event:', {
-      origin,
-      dataType: typeof data,
-      isMessage: isMessage(data),
-      destroyed: this.destroyed,
-    })
-
     if (this.destroyed) {
       this.log?.('❌ Message ignored: WindowMessenger destroyed')
       return
@@ -111,6 +107,10 @@ export class WindowMessenger {
       }
 
       if (isMessage(data)) {
+        // Prevent self-messaging loops: ignore messages from same participant
+        if (data.fromParticipantId === this.participantId) {
+          return
+        }
         this.log?.(
           '✅ Valid message received, calling',
           this.messageCallbacks.size,
@@ -118,11 +118,7 @@ export class WindowMessenger {
           data
         )
         this.messageCallbacks.forEach((callback) => callback(data))
-      } else {
-        this.log?.('❌ Message not recognized as bridge message')
       }
-    } else {
-      this.log?.('❌ Message ignored: Origin not allowed:', origin, 'allowed:', this.allowedOrigins)
     }
   }
 }

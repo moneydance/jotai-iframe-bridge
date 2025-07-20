@@ -53,32 +53,32 @@ export function handleSynMessage(
 ): void {
   const { participantId, log } = config
 
-  log?.('Received SYN message from participant:', message.participantId)
+  log?.('Received SYN message from participant:', message.fromParticipantId)
 
   // Pair with participant if not already paired
   if (!currentPairedParticipant) {
-    lifecycle.emit('pairedWith', message.participantId)
-    log?.(`Paired with participant: ${message.participantId}`)
+    lifecycle.emit('pairedWith', message.fromParticipantId)
+    log?.(`Paired with participant: ${message.fromParticipantId}`)
 
     // Send additional SYN only when first pairing
     lifecycle.emit('sendSyn', participantId)
     log?.('Requesting additional SYN message')
-  } else if (currentPairedParticipant !== message.participantId) {
+  } else if (currentPairedParticipant !== message.fromParticipantId) {
     log?.(
-      `Ignoring SYN from ${message.participantId}, already paired with ${currentPairedParticipant}`
+      `Ignoring SYN from ${message.fromParticipantId}, already paired with ${currentPairedParticipant}`
     )
     return
   } else {
     // Already paired with this participant - no need to send another SYN
-    log?.(`Already paired with ${message.participantId}, skipping additional SYN`)
+    log?.(`Already paired with ${message.fromParticipantId}, skipping additional SYN`)
   }
 
   // Determine leadership
-  const isHandshakeLeader = participantId > message.participantId
-  log?.(`Leadership check: ${participantId} > ${message.participantId} = ${isHandshakeLeader}`)
+  const isHandshakeLeader = participantId > message.fromParticipantId
+  log?.(`Leadership check: ${participantId} > ${message.fromParticipantId} = ${isHandshakeLeader}`)
 
   if (isHandshakeLeader) {
-    sendAck1Message(lifecycle, config, message.participantId)
+    sendAck1Message(lifecycle, config, message.fromParticipantId)
   }
 }
 
@@ -262,7 +262,6 @@ export function createUniversalMessageHandler(
       handleMethodCall(message, lifecycle, config, state.handshakeCompleted)
     } else if (isReplyMessage(message)) {
       // Reply messages are handled by the RemoteProxy, not here
-      log?.('📨 Ignoring REPLY message (handled by RemoteProxy)')
     } else {
       log?.('📨 Ignoring unknown message type:', (message as any).type)
     }

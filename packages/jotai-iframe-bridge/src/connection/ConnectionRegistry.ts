@@ -47,6 +47,30 @@ export class ConnectionRegistry {
   }
 
   /**
+   * Get or create a session atomically to prevent race conditions
+   * This ensures only one session exists per window even with multiple bridges
+   */
+  getOrCreateSession<
+    TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any>,
+    TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any>,
+  >(
+    targetWindow: Window,
+    sessionFactory: () => ConnectionSession<TLocalMethods, TRemoteMethods>
+  ): ConnectionSession<TLocalMethods, TRemoteMethods> {
+    // Check if session already exists
+    const existingSession = this.registry.get(targetWindow)
+    if (existingSession) {
+      return existingSession as ConnectionSession<TLocalMethods, TRemoteMethods>
+    }
+
+    // Create new session using the factory
+    const newSession = sessionFactory()
+    this.setSession(targetWindow, newSession)
+
+    return newSession
+  }
+
+  /**
    * Remove session from registry
    */
   delete(targetWindow: Window): boolean {

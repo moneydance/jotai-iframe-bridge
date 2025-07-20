@@ -22,36 +22,51 @@ export function createBridge<
   store: Store = getDefaultStore()
 ): Bridge<TLocalMethods, TRemoteMethods> {
   const bridgeId = generateId()
+
+  // Override config.log to automatically include bridge ID in ALL logging
+  const originalLog = config.log
+  config.log = originalLog
+    ? (...args: any[]) => originalLog?.(...args, `| Bridge id: ${bridgeId} |`)
+    : undefined
+
   config.log?.(`🌉 Bridge: Creating Bridge with ID: ${bridgeId}`)
 
   const targetWindowAtom = atom<Window | null>(null)
 
   const sessionAtom = atom((get) => {
     const targetWindow = get(targetWindowAtom)
+    config.log?.(`🔍 sessionAtom re-evaluated: targetWindow=${!!targetWindow}`)
+
     if (!targetWindow) return null
 
-    // Always get the atom first to establish dependency
     const windowSessionAtom = connectionRegistry.get<TLocalMethods, TRemoteMethods>(targetWindow)
     let session = get(windowSessionAtom)
 
-    // Create session if it doesn't exist
     if (!session) {
-      const participantId = generateId()
-      const newSession = new ConnectionSession<TLocalMethods, TRemoteMethods>(
-        targetWindow,
-        config,
-        participantId,
-        connectionRegistry
-      )
-      connectionRegistry.setSession(targetWindow, newSession)
-      session = newSession
+      session = connectionRegistry.getOrCreateSession(targetWindow, () => {
+        const participantId = generateId()
+        config.log?.(`📝 Auto-creating session with participant: ${participantId}`)
+        return new ConnectionSession<TLocalMethods, TRemoteMethods>(
+          targetWindow,
+          config,
+          participantId,
+          connectionRegistry
+        )
+      })
+      config.log?.(`📝 Session resolved`)
     }
+    config.log?.(
+      `🔍 sessionAtom re-evaluated: session=${!!session}, destroyed=${session?.isDestroyed()}`
+    )
     return session
   })
 
   const remoteProxyPromiseAtom = atom((get) => {
     const session = get(sessionAtom)
     const proxyPromise = session?.getProxyPromise() ?? null
+    config.log?.(
+      `🔄 remoteProxyPromiseAtom re-evaluated: session=${!!session}, proxyPromise=${!!proxyPromise}`
+    )
     return proxyPromise
   })
 
@@ -60,6 +75,9 @@ export function createBridge<
   const isConnectedAtom = atom((get) => {
     const proxyLoadable = get(remoteProxyAtom)
     const isConnected = proxyLoadable.state === 'hasData'
+    config.log?.(
+      `📡 isConnectedAtom re-evaluated: state=${proxyLoadable.state}, isConnected=${isConnected}`
+    )
     return isConnected
   })
 
@@ -70,9 +88,9 @@ export function createBridge<
       if (!win) {
         throw new Error('No target window provided and not in iframe context')
       }
-      config.log?.(`🚀 Bridge ${bridgeId} connecting to target window`)
+      config.log?.(`🚀 Connecting to target window`)
       store.set(targetWindowAtom, win)
-      config.log?.(`✅ Bridge ${bridgeId} connected to target window`)
+      config.log?.(`✅ Connected to target window`)
     },
 
     isConnected(): boolean {
@@ -89,10 +107,9 @@ export function createBridge<
     },
 
     reset(): void {
-      config.log?.(`🧹 Resetting Bridge ${bridgeId}`)
+      config.log?.(`🧹 Resetting Bridge`)
       const currentSession = store.get(sessionAtom)
       currentSession?.destroy()
-      store.set(targetWindowAtom, null)
     },
   }
 

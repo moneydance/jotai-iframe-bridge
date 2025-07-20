@@ -1,4 +1,4 @@
-import { getDefaultStore } from 'jotai'
+import { createStore, getDefaultStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ConnectionRegistry } from '../src/connection/ConnectionRegistry'
 import type { ConnectionSession } from '../src/connection/ConnectionSession'
@@ -180,5 +180,85 @@ describe('ConnectionRegistry Reactivity', () => {
     } finally {
       unsubscribe()
     }
+  })
+})
+
+describe('ConnectionRegistry Race Condition Prevention', () => {
+  let registry: ConnectionRegistry
+  let mockWindow: Window
+  let store: ReturnType<typeof createStore>
+
+  beforeEach(() => {
+    registry = new ConnectionRegistry()
+    mockWindow = { location: { href: 'test' } } as unknown as Window
+    store = createStore()
+  })
+
+  const createMockSession = (id: string) =>
+    ({
+      isDestroyed: vi.fn().mockReturnValue(false),
+      destroy: vi.fn(),
+      participantId: id,
+    }) as unknown as ConnectionSession<any, any>
+
+  it('should prevent race conditions when multiple bridges try to create sessions', () => {
+    let factoryCallCount = 0
+    let sessionCreated: ConnectionSession<any, any> | null = null
+
+    const sessionFactory = () => {
+      factoryCallCount++
+      sessionCreated = createMockSession(`race-test-${factoryCallCount}`)
+      return sessionCreated
+    }
+
+    // Simulate two Bridge instances trying to create sessions simultaneously
+    const session1 = registry.getOrCreateSession(mockWindow, sessionFactory)
+    const session2 = registry.getOrCreateSession(mockWindow, sessionFactory)
+
+    // Should have only called the factory once (no race condition)
+    expect(factoryCallCount).toBe(1)
+
+    // Both calls should return the same session instance
+    expect(session1).toBe(session2)
+    expect(session1).toBe(sessionCreated)
+
+    // Verify the session is properly registered
+    const windowAtom = registry.get(mockWindow)
+    expect(store.get(windowAtom)).toBe(session1)
+  })
+
+  it('should handle multiple windows independently without race conditions', () => {
+    const window1 = { location: { href: 'test1' } } as unknown as Window
+    const window2 = { location: { href: 'test2' } } as unknown as Window
+
+    let factory1CallCount = 0
+    let factory2CallCount = 0
+
+    const sessionFactory1 = () => {
+      factory1CallCount++
+      return createMockSession(`window1-session-${factory1CallCount}`)
+    }
+
+    const sessionFactory2 = () => {
+      factory2CallCount++
+      return createMockSession(`window2-session-${factory2CallCount}`)
+    }
+
+    // Create sessions for different windows
+    const session1a = registry.getOrCreateSession(window1, sessionFactory1)
+    const session2a = registry.getOrCreateSession(window2, sessionFactory2)
+    const session1b = registry.getOrCreateSession(window1, sessionFactory1)
+    const session2b = registry.getOrCreateSession(window2, sessionFactory2)
+
+    // Each factory should have been called exactly once
+    expect(factory1CallCount).toBe(1)
+    expect(factory2CallCount).toBe(1)
+
+    // Same window should return same session
+    expect(session1a).toBe(session1b)
+    expect(session2a).toBe(session2b)
+
+    // Different windows should have different sessions
+    expect(session1a).not.toBe(session2a)
   })
 })

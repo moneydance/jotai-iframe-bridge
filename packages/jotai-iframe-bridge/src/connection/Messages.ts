@@ -13,11 +13,11 @@ export const Messages = {
   /**
    * Creates a SYN message to initiate handshake
    */
-  createSyn(participantId: string): SynMessage {
+  createSyn(fromParticipantId: string): SynMessage {
     return {
       namespace: NAMESPACE,
       type: 'SYN',
-      participantId,
+      fromParticipantId,
     }
   },
 
@@ -59,11 +59,18 @@ export const Messages = {
   /**
    * Creates a CALL message for remote method invocation
    */
-  createCall(id: string, methodPath: string[], args: unknown[], channel?: string): CallMessage {
+  createCall(
+    id: string,
+    fromParticipantId: string,
+    methodPath: string[],
+    args: unknown[],
+    channel?: string
+  ): CallMessage {
     return {
       namespace: NAMESPACE,
       type: 'CALL',
       id,
+      fromParticipantId,
       methodPath,
       args,
       ...(channel && { channel }),
@@ -73,11 +80,17 @@ export const Messages = {
   /**
    * Creates a REPLY message for method call responses
    */
-  createReply(callId: string, isError: boolean, value: unknown): ReplyMessage {
+  createReply(
+    callId: string,
+    fromParticipantId: string,
+    isError: boolean,
+    value: unknown
+  ): ReplyMessage {
     return {
       namespace: NAMESPACE,
       type: 'REPLY',
       callId,
+      fromParticipantId,
       isError,
       value,
     }
@@ -86,15 +99,15 @@ export const Messages = {
   /**
    * Creates a success REPLY message
    */
-  createSuccessReply(callId: string, value: unknown): ReplyMessage {
-    return Messages.createReply(callId, false, value)
+  createSuccessReply(callId: string, fromParticipantId: string, value: unknown): ReplyMessage {
+    return Messages.createReply(callId, fromParticipantId, false, value)
   },
 
   /**
    * Creates an error REPLY message
    */
-  createErrorReply(callId: string, error: Error | string): ReplyMessage {
+  createErrorReply(callId: string, fromParticipantId: string, error: Error | string): ReplyMessage {
     const errorValue = error instanceof Error ? error.message : error
-    return Messages.createReply(callId, true, errorValue)
+    return Messages.createReply(callId, fromParticipantId, true, errorValue)
   },
 } as const

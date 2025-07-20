@@ -35,8 +35,8 @@ export class SessionLifecycle {
       handlers.forEach((handler) => {
         try {
           handler(...args)
-        } catch (error) {
-          console.error(`Error in SessionLifecycle handler for ${event}:`, error)
+        } catch (_error) {
+          // Handler error - continue with other handlers
         }
       })
     }

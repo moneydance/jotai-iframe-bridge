@@ -1,7 +1,8 @@
 import { generateId, safeAssignment } from '../utils'
+import { Messages } from './Messages'
 import type { WindowMessenger } from './messaging'
-import type { CallMessage, Message, MethodPath, Methods, RemoteProxy, ReplyHandler } from './types'
-import { isReplyMessage, NAMESPACE } from './types'
+import type { Message, MethodPath, Methods, RemoteProxy, ReplyHandler } from './types'
+import { isReplyMessage } from './types'
 
 // ==================== Helper Functions ====================
 
@@ -55,6 +56,7 @@ export function createRemoteProxy<T extends Methods>(
 export function connectRemoteProxy<T extends Methods>(
   messenger: WindowMessenger,
   channel: string | undefined,
+  participantId: string,
   log?: (...args: unknown[]) => void,
   timeout = 30000
 ): { remoteProxy: RemoteProxy<T>; destroy: () => void } {
@@ -98,14 +100,7 @@ export function connectRemoteProxy<T extends Methods>(
     return new Promise((resolve, reject) => {
       const callId = generateId()
 
-      const callMessage: CallMessage = {
-        namespace: NAMESPACE,
-        channel,
-        type: 'CALL',
-        id: callId,
-        methodPath,
-        args,
-      }
+      const callMessage = Messages.createCall(callId, participantId, methodPath, args, channel)
 
       const replyHandler: ReplyHandler = {
         methodPath,

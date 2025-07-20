@@ -15,30 +15,27 @@ export const NAMESPACE = 'jotai-iframe-bridge'
 
 type MessageBase = {
   namespace: string
+  fromParticipantId: string
   channel?: string
 }
 
 export type SynMessage = MessageBase & {
   type: 'SYN'
-  participantId: string
 }
 
 export type Ack1Message = MessageBase & {
   type: 'ACK1'
-  fromParticipantId: string // Child's participant ID
   toParticipantId: string // Host's participant ID (from SYN)
   methodPaths?: string[]
 }
 
 export type Ack2Message = MessageBase & {
   type: 'ACK2'
-  fromParticipantId: string // Host's participant ID
   toParticipantId: string // Child's participant ID (from ACK1)
 }
 
 export type DestroyMessage = MessageBase & {
   type: 'DESTROY'
-  fromParticipantId: string // Who is destroying the connection
 }
 
 export type CallMessage = MessageBase & {

@@ -44,17 +44,6 @@ function ConnectionStatus({ state }: { state: LazyLoadable<unknown>['state'] }) 
 // Connection Section Helper Component
 function ConnectionSection({ result }: { result: number | null }) {
   const remoteProxyLoadable = useRemoteProxy()
-  const bridge = useBridge()
-
-  const handleDestroyConnection = useCallback(() => {
-    console.log(`🔥 Destroying connection [${bridge.id}]`)
-    bridge.reset()
-  }, [bridge])
-
-  const handleRetryConnection = useCallback(() => {
-    console.log(`🔄 Retrying connection [${bridge.id}]`)
-    bridge.connect() // Connect to parent window
-  }, [bridge])
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
@@ -71,28 +60,6 @@ function ConnectionSection({ result }: { result: number | null }) {
             </span>
           </div>
         )}
-      </div>
-
-      {/* Connection Control Buttons */}
-      <div className="flex gap-2">
-        <button
-          type="button"
-          disabled={remoteProxyLoadable.state === 'loading'}
-          onClick={handleDestroyConnection}
-          className="px-4 py-2 bg-red-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500 hover:bg-red-600"
-          data-testid="destroy-connection-button"
-        >
-          Destroy Connection
-        </button>
-        <button
-          type="button"
-          disabled={remoteProxyLoadable.state === 'loading'}
-          onClick={handleRetryConnection}
-          className="px-4 py-2 bg-blue-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 hover:bg-blue-600"
-          data-testid="retry-connection-button"
-        >
-          Reconnect
-        </button>
       </div>
     </div>
   )
@@ -155,9 +122,6 @@ function CalculationSection({
   )
 }
 
-// Export for testing
-export const REMOTE_URL = 'http://localhost:5173'
-
 export function AppContent() {
   const bridge = useBridge()
   const [result, setResult] = useState<number | null>(null)
@@ -165,18 +129,21 @@ export function AppContent() {
   const [numberB, setNumberB] = useState<number>(7)
   const remoteProxyLoadable = useRemoteProxy()
 
+  // Refresh UI state without disconnecting bridge
+  const handleRefresh = useCallback(() => {
+    bridge.reset()
+  }, [bridge.reset])
+
   // Auto-connect when bridge is created
   useEffect(() => {
-    console.log(`🚀 Auto-connecting bridge [${bridge.id}] to parent window`)
-
     const connectBridge = async () => {
-      const [ok, error] = await safeAssignment(() => {
+      const [ok, _error] = await safeAssignment(() => {
         bridge.connect() // Connect to parent window
         return true
       })
 
       if (!ok) {
-        console.error(`Bridge connection failed [${bridge.id}]:`, error)
+        // Connection failed silently
       }
     }
 
@@ -188,15 +155,13 @@ export function AppContent() {
 
     const remoteProxy = remoteProxyLoadable.data
 
-    const [ok, error, result] = await safeAssignment(() => remoteProxy.add(numberA, numberB))
+    const [ok, _error, result] = await safeAssignment(() => remoteProxy.add(numberA, numberB))
     if (!ok) {
-      console.error(`Remote add failed [${bridge.id}]:`, error)
       return
     }
 
     setResult(result)
-    console.log(`Host addition [${bridge.id}]: ${numberA} + ${numberB} = ${result}`)
-  }, [bridge.id, remoteProxyLoadable, numberA, numberB])
+  }, [remoteProxyLoadable, numberA, numberB])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
@@ -206,6 +171,17 @@ export function AppContent() {
           <p className="text-gray-600">
             This iframe can call addition in the host and provides subtraction
           </p>
+
+          {/* Refresh Button */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+            >
+              🔄 Refresh
+            </button>
+          </div>
         </div>
 
         <ConnectionSection result={result} />

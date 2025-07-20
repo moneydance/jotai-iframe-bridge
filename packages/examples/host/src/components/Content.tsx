@@ -67,29 +67,8 @@ function ConnectionStatus({ state, className = '' }: ConnectionStatusProps) {
 }
 
 // Connection Section Helper Component (uses hooks directly)
-function ConnectionSection({
-  result,
-  iframeElement,
-}: {
-  result: number | null
-  iframeElement: HTMLIFrameElement | null
-}) {
-  const bridge = useBridge()
+function ConnectionSection({ result }: { result: number | null }) {
   const remoteProxyLoadable = useRemoteProxy()
-
-  const handleDestroyConnection = useCallback(() => {
-    console.log(`🔥 Resetting connection [${bridge.id}]`)
-    bridge.reset()
-  }, [bridge])
-
-  const handleRetryConnection = useCallback(() => {
-    console.log(`🔄 Retrying connection [${bridge.id}]`)
-    if (!iframeElement?.contentWindow) {
-      console.error(`Iframe content window not found [${bridge.id}]`)
-      return
-    }
-    bridge.connect(iframeElement.contentWindow)
-  }, [bridge, iframeElement?.contentWindow])
 
   return (
     <>
@@ -108,28 +87,6 @@ function ConnectionSection({
               </span>
             </div>
           )}
-        </div>
-
-        {/* Connection Control Buttons */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={remoteProxyLoadable.state === 'loading'}
-            onClick={handleDestroyConnection}
-            className="px-4 py-2 bg-red-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-red-500 hover:bg-red-600"
-            data-testid="destroy-connection-button"
-          >
-            Destroy Connection
-          </button>
-          <button
-            type="button"
-            disabled={!iframeElement?.contentWindow || remoteProxyLoadable.state === 'loading'}
-            onClick={handleRetryConnection}
-            className="px-4 py-2 bg-blue-500 text-white rounded transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 hover:bg-blue-600"
-            data-testid="retry-connection-button"
-          >
-            Reconnect
-          </button>
         </div>
       </div>
     </>
@@ -205,8 +162,6 @@ const IframeContainer = memo(
     setIframeElement: (element: HTMLIFrameElement | null) => void
   }) => {
     const bridge = useBridge()
-    console.log('isConnected', bridge.isConnected())
-    console.log('remoteProxyPromise', bridge.getRemoteProxyPromise())
     // @ts-ignore
 
     // Handle iframe initialization when element becomes available and loaded
@@ -214,8 +169,6 @@ const IframeContainer = memo(
       if (!iframeElement?.contentWindow) {
         return
       }
-
-      console.log(`🚀 Connecting bridge [${bridge.id}] to iframe content window`)
 
       const contentWindow = iframeElement.contentWindow
       bridge.connect(contentWindow)
@@ -227,13 +180,9 @@ const IframeContainer = memo(
 
     const handleIframeRef = useCallback(
       (element: HTMLIFrameElement | null) => {
-        console.log(`📎 Iframe ref callback [${bridge.id}]:`, {
-          element,
-          contentWindow: element?.contentWindow,
-        })
         setIframeElement(element)
       },
-      [bridge.id, setIframeElement]
+      [setIframeElement]
     )
 
     return (
@@ -245,9 +194,6 @@ const IframeContainer = memo(
             src={REMOTE_URL}
             className="w-full h-96"
             title="Child Frame"
-            onLoad={() => {
-              console.log(`📦 Iframe loaded [${bridge.id}]`)
-            }}
           />
         </div>
         <div className="mt-4 text-sm text-gray-600">
@@ -271,6 +217,11 @@ export function AppContent() {
 
   const remoteProxyLoadable = useRemoteProxy()
 
+  // Refresh UI state without disconnecting bridge
+  const refreshUI = useCallback(() => {
+    bridge.reset()
+  }, [bridge])
+
   const testSubtraction = async () => {
     if (remoteProxyLoadable.state !== 'hasData') return
 
@@ -279,9 +230,7 @@ export function AppContent() {
     try {
       const result = await remoteProxy.subtract(numberA, numberB)
       setResult(result)
-      console.log(`Remote subtraction [${bridge.id}]: ${numberA} - ${numberB} = ${result}`)
-    } catch (error) {
-      console.error(`Remote subtract failed [${bridge.id}]:`, error)
+    } catch (_error) {
       return
     }
   }
@@ -292,9 +241,20 @@ export function AppContent() {
         <div className="text-center mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Host Application</h1>
           <p className="text-gray-600">Testing iframe bridge with simple math operations</p>
+
+          {/* Refresh Button */}
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={refreshUI}
+              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+            >
+              🔄 Refresh
+            </button>
+          </div>
         </div>
 
-        <ConnectionSection result={result} iframeElement={iframeElement} />
+        <ConnectionSection result={result} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Controls */}

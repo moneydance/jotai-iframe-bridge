@@ -52,7 +52,8 @@ describe('AppContent - Real UI Testing', () => {
   beforeEach(() => {
     // Create fresh instances for each test to ensure isolation
     testStore = createStore()
-    testBridge = createDefaultBridge(testStore)
+    // Use a small handshake delay for testing to see state transitions
+    testBridge = createDefaultBridge(testStore) // 100ms delay
     console.log(`🔬 Test setup created bridge ID: ${testBridge.id}`)
   })
 
@@ -64,8 +65,7 @@ describe('AppContent - Real UI Testing', () => {
     renderApp(<AppContent />, { bridge: testBridge, store: testStore })
     expect(screen.getByText('Host Application')).toBeInTheDocument()
     expect(screen.getByTestId('connection-status')).toHaveTextContent('connecting')
-    expect(screen.getByTestId('destroy-connection-button')).toBeInTheDocument()
-    expect(screen.getByTestId('retry-connection-button')).toBeInTheDocument()
+    expect(screen.getByText('🔄 Refresh')).toBeInTheDocument()
   })
 
   test('status goes to connected when iframe is loaded', async () => {
@@ -123,7 +123,7 @@ describe('AppContent - Real UI Testing', () => {
   })
 
   test(
-    'destroy connection and reconnect workflow',
+    'refresh button resets bridge connection',
     async () => {
       const user = userEvent.setup()
       renderApp(<AppContent />, { bridge: testBridge, store: testStore })
@@ -134,41 +134,42 @@ describe('AppContent - Real UI Testing', () => {
       expect(screen.getByTestId('connection-status')).toHaveTextContent('connected')
       console.log('✅ Initial connection established')
 
-      // Step 2: Spy on bridge methods to verify they're called
-      const destroySpy = vi.spyOn(testBridge, 'reset')
-      const retrySpy = vi.spyOn(testBridge, 'connect')
+      // Step 2: Spy on bridge reset method to verify it's called
+      const resetSpy = vi.spyOn(testBridge, 'reset')
 
-      // Step 3: Click destroy connection button
-      console.log('💥 Step 3: Clicking destroy connection button...')
-      const destroyButton = screen.getByTestId('destroy-connection-button')
-      expect(destroyButton).toBeInTheDocument()
-      await user.click(destroyButton)
-      console.log('✅ Destroy button clicked')
+      // Step 3: Click refresh button
+      console.log('🔄 Step 3: Clicking refresh button...')
+      const refreshButton = screen.getByText('🔄 Refresh')
+      expect(refreshButton).toBeInTheDocument()
+      await user.click(refreshButton)
+      console.log('✅ Refresh button clicked')
 
-      // Step 4: Verify destroy was called
-      expect(destroySpy).toHaveBeenCalledTimes(1)
-      console.log('✅ Bridge.destroy() was called')
+      // Step 4: Verify reset was called
+      expect(resetSpy).toHaveBeenCalledTimes(1)
+      console.log('✅ Bridge.reset() was called')
 
-      // Step 5: Click reconnect button
-      console.log('🔄 Step 5: Clicking reconnect button...')
-      const reconnectButton = screen.getByTestId('retry-connection-button')
-      expect(reconnectButton).toBeInTheDocument()
-      await user.click(reconnectButton)
-      console.log('✅ Reconnect button clicked')
+      // Step 5: Wait for status to go to connecting (old session destroyed)
+      console.log('⏸️ Step 5: Waiting for status to show connecting...')
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('connection-status')).toHaveTextContent('connecting')
+        },
+        { timeout: 2000 }
+      )
+      console.log('✅ Status correctly shows connecting after reset')
 
-      // Step 6: Verify retry was called
-      expect(retrySpy).toHaveBeenCalledTimes(1)
-      console.log('✅ Bridge.retry() was called')
-
-      // Step 7: Wait a bit and verify we can still perform calculations (connection works)
-      console.log('🧮 Step 7: Testing functionality after reconnection...')
+      // Step 6: Wait for status to go back to connected (new session established)
+      console.log('🔗 Step 6: Waiting for reconnection...')
       await waitFor(
         () => {
           expect(screen.getByTestId('connection-status')).toHaveTextContent('connected')
         },
-        { timeout: 3000 }
+        { timeout: 5000 }
       )
+      console.log('✅ Connection status confirmed as connected after refresh')
 
+      // Step 7: Test functionality works after refresh
+      console.log('🧮 Step 7: Testing functionality after refresh...')
       const inputA = screen.getByTestId('number-a-input')
       const inputB = screen.getByTestId('number-b-input')
       const calculateButton = screen.getByTestId('calculate-subtract-button')
@@ -179,15 +180,17 @@ describe('AppContent - Real UI Testing', () => {
       await user.type(inputB, '8')
       await user.click(calculateButton)
 
-      await waitFor(() => {
-        const result = screen.getByTestId('calculation-result')
-        expect(result).toHaveTextContent('12')
-      })
-      console.log('✅ Calculation works correctly after destroy/reconnect cycle!')
+      await waitFor(
+        () => {
+          const result = screen.getByTestId('calculation-result')
+          expect(result).toHaveTextContent('12')
+        },
+        { timeout: 5000 }
+      )
+      console.log('✅ Calculation works correctly after refresh!')
 
-      // Cleanup spies
-      destroySpy.mockRestore()
-      retrySpy.mockRestore()
+      // Cleanup spy
+      resetSpy.mockRestore()
     },
     { timeout: 15000 }
   )

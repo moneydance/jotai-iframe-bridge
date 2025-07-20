@@ -13,15 +13,10 @@ const cache1 = new WeakMap()
 const memo1 = <T>(create: () => T, dep1: object): T =>
   cache1.has(dep1) ? cache1.get(dep1) : cache1.set(dep1, create()).get(dep1)
 
-let createdAtomCount = 0
-
 export function lazyLoadable<Value>(
   promiseAtom: Atom<Promise<Value> | null>
 ): Atom<LazyLoadable<Value>> {
   return memo1(() => {
-    createdAtomCount++
-    console.log(`🧠 LazyLoadable: Created atom #${createdAtomCount} for`, promiseAtom)
-
     // Create a loadable cache for this specific lazyLoadable instance
     const loadableCache = new WeakMap<Promise<Value>, Loadable<Value>>()
     const refreshAtom = atom(0)

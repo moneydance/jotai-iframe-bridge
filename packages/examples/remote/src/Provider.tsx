@@ -24,10 +24,10 @@ function createBridgeConfig(): ConnectionConfig<ChildMethods> {
     methods: {
       subtract: async (a: number, b: number) => {
         const result = a - b
-        console.log(`Child: ${a} - ${b} = ${result}`)
         return result
       },
     },
+    handshakeDelay: Math.random() * 2000, // Random delay to simulate network latency
     log: (...args: unknown[]) => console.log('🚌 Child Bridge:', ...args),
   }
 }
@@ -59,7 +59,6 @@ type AppProviderProps = {
 
 export function AppProvider({ children, bridge, store = getDefaultStore() }: AppProviderProps) {
   const defaultBridge = useMemo(() => bridge || createDefaultBridge(store), [bridge, store])
-  console.log(`🎯 AppProvider using bridge ID: ${defaultBridge.id}`)
 
   return (
     <Provider store={store}>

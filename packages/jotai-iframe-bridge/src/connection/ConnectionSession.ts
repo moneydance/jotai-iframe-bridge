@@ -12,6 +12,7 @@ export interface ConnectionConfig<TLocalMethods extends Methods = Methods> {
   methods?: TLocalMethods
   allowedOrigins?: (string | RegExp)[]
   timeout?: number
+  handshakeDelay?: number
   log?: (...args: unknown[]) => void
 }
 
@@ -66,6 +67,7 @@ export class ConnectionSession<
     this.messenger = new WindowMessenger(
       targetWindow,
       config.allowedOrigins || [window.origin],
+      this.participantId,
       config.log
     )
 
@@ -90,6 +92,7 @@ export class ConnectionSession<
       const { remoteProxy } = connectRemoteProxy<TRemoteMethods>(
         this.messenger,
         undefined, // channel
+        this.participantId,
         this.config.log,
         this.config.timeout || 30000
       )
@@ -124,9 +127,18 @@ export class ConnectionSession<
 
     // Handle send events from pure handlers
     this.lifecycle.on('sendSyn', (participantId: string) => {
-      this.messenger.sendMessage(Messages.createSyn(participantId), (error) =>
-        this.lifecycle.emit('connectionFailed', error)
-      )
+      const delay = this.config.handshakeDelay || 0
+      const sendMessage = () => {
+        this.messenger.sendMessage(Messages.createSyn(participantId), (error) =>
+          this.lifecycle.emit('connectionFailed', error)
+        )
+      }
+
+      if (delay > 0) {
+        setTimeout(sendMessage, delay)
+      } else {
+        sendMessage()
+      }
     })
 
     this.lifecycle.on('sendAck1', (fromParticipantId: string, toParticipantId: string) => {
@@ -145,6 +157,13 @@ export class ConnectionSession<
       this.messenger.sendMessage(Messages.createDestroy(participantId), (error) =>
         this.config.log?.('Failed to send DESTROY message:', error)
       )
+    })
+
+    this.lifecycle.on('sendMethodReply', (callId: string, isError: boolean, value: any) => {
+      const replyMessage = Messages.createReply(callId, this.participantId, isError, value)
+      this.messenger.sendMessage(replyMessage, (error) => {
+        this.config.log?.('Failed to send method reply:', error)
+      })
     })
   }
 
@@ -199,6 +218,10 @@ export class ConnectionSession<
 
   isDestroyed(): boolean {
     return this.destroyed
+  }
+
+  getParticipantId(): string {
+    return this.participantId
   }
 
   sendDestroyMessage(): void {
