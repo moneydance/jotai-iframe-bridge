@@ -1,9 +1,10 @@
+import type { ConnectionRegistry } from './ConnectionRegistry'
 import { createUniversalMessageHandler, type HandlerConfig } from './handlers'
 import { Messages } from './Messages'
 import { WindowMessenger } from './messaging'
 import { connectRemoteProxy } from './proxy'
 import { SessionLifecycle } from './SessionLifecycle'
-import type { Methods, RemoteProxy } from './types'
+import type { Message, Methods, RemoteProxy } from './types'
 
 export interface ConnectionConfig<TLocalMethods extends Methods = Methods> {
   allowedOrigins: string[]
@@ -24,27 +25,34 @@ const INITIAL_HANDLER_STATE: HandlerState = {
 }
 
 export class ConnectionSession<
-  TLocalMethods extends Methods = Methods,
-  TRemoteMethods extends Methods = Methods,
+  TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
+  TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any> = Methods,
 > {
-  private messenger: WindowMessenger
+  private config: ConnectionConfig<TLocalMethods>
+  private participantId: string
+  private targetWindow: Window
+  private registry: ConnectionRegistry
   private lifecycle: SessionLifecycle
   private handlerState: HandlerState
+  private messenger: WindowMessenger
+  private universalHandler!: (message: Message) => void
   private proxyPromise: Promise<RemoteProxy<TRemoteMethods>>
   private proxyPromiseResolve!: (proxy: RemoteProxy<TRemoteMethods>) => void
   private proxyPromiseReject!: (error: Error) => void
-  private universalHandler: ((message: any) => void) | null = null
   private timeoutId: NodeJS.Timeout | null = null
-  private onDestroy?: () => void
+  private destroyed = false // Track if session has been destroyed
 
   constructor(
     targetWindow: Window,
-    private config: ConnectionConfig<TLocalMethods>,
-    private participantId: string,
-    onDestroy?: () => void
+    config: ConnectionConfig<TLocalMethods>,
+    participantId: string,
+    registry: ConnectionRegistry
   ) {
+    this.config = config
+    this.participantId = participantId
+    this.targetWindow = targetWindow
+    this.registry = registry
     this.config.log?.(`🔗 Creating ConnectionSession with participant: ${this.participantId}`)
-    this.onDestroy = onDestroy
     // Initialize event system
     this.lifecycle = new SessionLifecycle()
 
@@ -137,7 +145,7 @@ export class ConnectionSession<
     }
 
     this.universalHandler = createUniversalMessageHandler(this.lifecycle, handlerConfig, () =>
-      Object.freeze(this.handlerState)
+      Object.freeze({ ...this.handlerState })
     )
 
     // Register with messenger
@@ -175,20 +183,25 @@ export class ConnectionSession<
     return this.proxyPromise
   }
 
-  isConnected(): boolean {
-    return this.handlerState.handshakeCompleted
-  }
-
   sendDestroyMessage(): void {
-    this.lifecycle.emit('sendDestroy', this.participantId)
+    if (this.handlerState.handshakeCompleted) {
+      this.lifecycle.emit('sendDestroy', this.participantId)
+      this.config.log?.(`📤 Sending DESTROY for established session: ${this.participantId}`)
+    } else {
+      this.config.log?.(`⏭️ Skipping DESTROY for unestablished session: ${this.participantId}`)
+    }
   }
 
   // Clean teardown - the beauty of event-driven architecture!
   destroy(): void {
+    if (this.destroyed) return // Already destroyed
+
+    this.destroyed = true
     this.sendDestroyMessage()
     this.config.log?.(`🧹 Destroying ConnectionSession for participant: ${this.participantId}`)
     this.messenger.destroy()
-    this.onDestroy?.()
+    // Remove self from registry
+    this.registry.delete(this.targetWindow)
     this.config.log?.(`✅ ConnectionSession destroyed for participant: ${this.participantId}`)
   }
 }

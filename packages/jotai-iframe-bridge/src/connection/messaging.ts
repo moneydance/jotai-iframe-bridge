@@ -1,5 +1,5 @@
 import type { Message } from './types'
-import { isMessage, isSynMessage } from './types'
+import { isDestroyMessage, isMessage, isSynMessage } from './types'
 
 // ==================== Window Messenger ====================
 
@@ -57,6 +57,10 @@ export class WindowMessenger {
     this.messageCallbacks.delete(callback)
   }
 
+  getConcreteRemoteOrigin = (): string | undefined => {
+    return this.concreteRemoteOrigin
+  }
+
   destroy = (): void => {
     this.destroyed = true
     window.removeEventListener('message', this.handleMessageFromRemoteWindow)
@@ -72,12 +76,14 @@ export class WindowMessenger {
   }
 
   private getOriginForSendingMessage = (message: Message): string => {
-    if (isSynMessage(message)) {
+    if (isSynMessage(message) || isDestroyMessage(message)) {
       return '*'
     }
 
     if (!this.concreteRemoteOrigin) {
-      throw new Error('Concrete remote origin not set')
+      throw new Error(
+        'Cannot send message: no established communication channel (concrete remote origin not available)'
+      )
     }
 
     return this.concreteRemoteOrigin === 'null' && this.allowedOrigins.includes('*')
@@ -112,6 +118,8 @@ export class WindowMessenger {
           data
         )
         this.messageCallbacks.forEach((callback) => callback(data))
+      } else {
+        this.log?.('❌ Message not recognized as bridge message')
       }
     } else {
       this.log?.('❌ Message ignored: Origin not allowed:', origin, 'allowed:', this.allowedOrigins)

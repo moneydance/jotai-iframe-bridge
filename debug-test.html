@@ -1,0 +1,58 @@
+
+\\<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Message Structure</title>
+</head>
+<body>
+    <h1>Debug Message Structure</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        // Import the Messages factory and isMessage function
+        import { Messages } from './packages/jotai-iframe-bridge/src/connection/Messages.js';
+        import { isMessage, NAMESPACE } from './packages/jotai-iframe-bridge/src/connection/types.js';
+
+        const output = document.getElementById('output');
+
+        function log(message) {
+            const div = document.createElement('div');
+            div.textContent = message;
+            output.appendChild(div);
+            console.log(message);
+        }
+
+        // Test message creation and validation
+        log('=== Debug Message Structure ===');
+        log(`NAMESPACE: ${NAMESPACE}`);
+
+        // Create a SYN message
+        const synMessage = Messages.createSyn('test-participant-id');
+        log(`Created SYN message: ${JSON.stringify(synMessage, null, 2)}`);
+
+        // Test if it's recognized as a message
+        const isValidMessage = isMessage(synMessage);
+        log(`isMessage(synMessage): ${isValidMessage}`);
+
+        // Test serialization/deserialization
+        const serialized = JSON.stringify(synMessage);
+        const deserialized = JSON.parse(serialized);
+        log(`Serialized: ${serialized}`);
+        log(`Deserialized: ${JSON.stringify(deserialized, null, 2)}`);
+        log(`isMessage(deserialized): ${isMessage(deserialized)}`);
+
+        // Test postMessage simulation
+        log('\n=== Simulating postMessage ===');
+        window.addEventListener('message', (event) => {
+            log(`Received message event:`);
+            log(`  origin: ${event.origin}`);
+            log(`  data type: ${typeof event.data}`);
+            log(`  data: ${JSON.stringify(event.data, null, 2)}`);
+            log(`  isMessage(data): ${isMessage(event.data)}`);
+        });
+
+        // Send a message to ourselves
+        window.postMessage(synMessage, '*');
+    </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import type { Atom } from 'jotai'
 import { atom, getDefaultStore } from 'jotai'
+import { connectionRegistry } from '../connection/ConnectionRegistry'
 import { type ConnectionConfig, ConnectionSession } from '../connection/ConnectionSession'
 import type { Methods, RemoteProxy } from '../connection/types'
 import { generateId } from '../utils'
@@ -19,49 +20,66 @@ export function createBridge<
   config: ConnectionConfig<TLocalMethods>,
   store: Store = getDefaultStore()
 ): Bridge<TLocalMethods, TRemoteMethods> {
-  // Generate unique ID for this bridge instance
   const bridgeId = generateId()
   config.log?.(`🌉 Bridge: Creating Bridge with ID: ${bridgeId}`)
 
-  const currentSessionAtom = atom<ConnectionSession<TLocalMethods, TRemoteMethods> | null>(null)
+  const targetWindowAtom = atom<Window | null>(null)
+
+  const sessionAtom = atom((get) => {
+    const targetWindow = get(targetWindowAtom)
+    if (!targetWindow) return null
+    return get(
+      connectionRegistry.get(targetWindow) as Atom<ConnectionSession<
+        TLocalMethods,
+        TRemoteMethods
+      > | null>
+    )
+  })
+
   const remoteProxyPromiseAtom = atom((get) => {
-    const session = get(currentSessionAtom)
+    const session = get(sessionAtom)
+    console.log('remoteProxyPromiseAtom', session?.getProxyPromise())
     return session?.getProxyPromise() ?? null
   })
+
   const remoteProxyAtom = lazyLoadable(remoteProxyPromiseAtom)
 
   const isConnectedAtom = atom((get) => {
-    const session = get(currentSessionAtom)
-    return session?.isConnected() ?? false
+    const proxyLoadable = get(remoteProxyAtom)
+    return proxyLoadable.state === 'hasData'
   })
 
   const bridge: Bridge<TLocalMethods, TRemoteMethods> = {
     id: bridgeId,
-    connect(targetWindow?: Window): void {
-      const window = targetWindow || (self.parent !== self ? self.parent : undefined)
-      if (!window) {
+    connect(window?: Window): void {
+      const win = window || (self.parent !== self ? self.parent : undefined)
+      if (!win) {
         throw new Error('No target window provided and not in iframe context')
       }
 
       config.log?.(`🚀 Bridge ${bridgeId} connecting to target window`)
 
-      // Clean up existing session (fresh state approach)
-      const currentSession = store.get(currentSessionAtom)
-      if (currentSession) {
-        currentSession.destroy()
-      }
-      const participantId = generateId()
-      const newSession = new ConnectionSession<TLocalMethods, TRemoteMethods>(
-        window,
-        config,
-        participantId,
+      store.set(targetWindowAtom, win)
+
+      connectionRegistry.getOrCreate<TLocalMethods, TRemoteMethods>(
+        win,
         () => {
-          config.log?.(`🧹 Bridge ${bridgeId} connection session destroyed`)
-          store.set(currentSessionAtom, null)
-        }
+          const participantId = generateId()
+          const newSession = new ConnectionSession<TLocalMethods, TRemoteMethods>(
+            win,
+            config,
+            participantId,
+            connectionRegistry
+          )
+          config.log?.(
+            `📝 Created new session for bridge ${bridgeId} with participant: ${participantId}`
+          )
+          return newSession
+        },
+        config.log
       )
-      store.set(currentSessionAtom, newSession)
-      config.log?.(`✅ Bridge ${bridgeId} session created with participant: ${participantId}`)
+
+      config.log?.(`✅ Bridge ${bridgeId} connected to target window`)
     },
 
     isConnected(): boolean {
@@ -78,13 +96,9 @@ export function createBridge<
 
     reset(): void {
       config.log?.(`🧹 Resetting Bridge ${bridgeId}`)
-      const currentSession = store.get(currentSessionAtom)
-      if (currentSession) {
-        currentSession.destroy()
-        config.log?.(`✅ Bridge ${bridgeId} reset complete`)
-      } else {
-        config.log?.(`🤷 Bridge ${bridgeId} reset called but no active session`)
-      }
+      const currentSession = store.get(sessionAtom)
+      currentSession?.destroy()
+      store.set(targetWindowAtom, null)
     },
   }
 

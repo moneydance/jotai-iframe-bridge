@@ -59,16 +59,19 @@ export function handleSynMessage(
   if (!currentPairedParticipant) {
     lifecycle.emit('pairedWith', message.participantId)
     log?.(`Paired with participant: ${message.participantId}`)
+
+    // Send additional SYN only when first pairing
+    lifecycle.emit('sendSyn', participantId)
+    log?.('Requesting additional SYN message')
   } else if (currentPairedParticipant !== message.participantId) {
     log?.(
       `Ignoring SYN from ${message.participantId}, already paired with ${currentPairedParticipant}`
     )
     return
+  } else {
+    // Already paired with this participant - no need to send another SYN
+    log?.(`Already paired with ${message.participantId}, skipping additional SYN`)
   }
-
-  // Send additional SYN via event
-  lifecycle.emit('sendSyn', participantId)
-  log?.('Requesting additional SYN message')
 
   // Determine leadership
   const isHandshakeLeader = participantId > message.participantId
