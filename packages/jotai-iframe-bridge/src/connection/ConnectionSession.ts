@@ -1,3 +1,5 @@
+import type { WritableAtom } from 'jotai'
+import { atom, getDefaultStore } from 'jotai'
 import type { ConnectionRegistry } from './ConnectionRegistry'
 import { createUniversalMessageHandler, type HandlerConfig } from './handlers'
 import { Messages } from './Messages'
@@ -7,22 +9,14 @@ import { SessionLifecycle } from './SessionLifecycle'
 import type { Message, Methods, RemoteProxy } from './types'
 
 export interface ConnectionConfig<TLocalMethods extends Methods = Methods> {
-  allowedOrigins: string[]
   methods?: TLocalMethods
+  allowedOrigins?: (string | RegExp)[]
   timeout?: number
   log?: (...args: unknown[]) => void
 }
 
-// Handler state (managed by ConnectionSession)
-interface HandlerState {
-  pairedParticipantId: string | null
-  handshakeCompleted: boolean
-}
-
-const INITIAL_HANDLER_STATE: HandlerState = {
-  pairedParticipantId: null,
-  handshakeCompleted: false,
-}
+// Store type from Jotai
+type Store = ReturnType<typeof getDefaultStore>
 
 export class ConnectionSession<
   TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
@@ -33,7 +27,9 @@ export class ConnectionSession<
   private targetWindow: Window
   private registry: ConnectionRegistry
   private lifecycle: SessionLifecycle
-  private handlerState: HandlerState
+  private pairedParticipantAtom: WritableAtom<string | null, [string | null], void>
+  private handshakeCompletedAtom: WritableAtom<boolean, [boolean], void>
+  private store: Store
   private messenger: WindowMessenger
   private universalHandler!: (message: Message) => void
   private proxyPromise: Promise<RemoteProxy<TRemoteMethods>>
@@ -52,15 +48,26 @@ export class ConnectionSession<
     this.participantId = participantId
     this.targetWindow = targetWindow
     this.registry = registry
+    this.store = getDefaultStore()
     this.config.log?.(`🔗 Creating ConnectionSession with participant: ${this.participantId}`)
+
     // Initialize event system
     this.lifecycle = new SessionLifecycle()
 
-    // Initialize handler state (minimal state pushed up to session level)
-    this.handlerState = INITIAL_HANDLER_STATE
+    // Initialize handler state atoms (immutable and reactive!)
+    this.pairedParticipantAtom = atom<string | null>(null) as WritableAtom<
+      string | null,
+      [string | null],
+      void
+    >
+    this.handshakeCompletedAtom = atom<boolean>(false) as WritableAtom<boolean, [boolean], void>
 
     // Initialize messenger
-    this.messenger = new WindowMessenger(targetWindow, config.allowedOrigins, config.log)
+    this.messenger = new WindowMessenger(
+      targetWindow,
+      config.allowedOrigins || [window.origin],
+      config.log
+    )
 
     // Create promise that will be resolved by event handlers
     this.proxyPromise = new Promise<RemoteProxy<TRemoteMethods>>((resolve, reject) => {
@@ -77,7 +84,7 @@ export class ConnectionSession<
   private setupEventListeners(): void {
     // Connection established - create and resolve proxy promise
     this.lifecycle.on('connectionEstablished', () => {
-      this.handlerState.handshakeCompleted = true
+      this.store.set(this.handshakeCompletedAtom, true)
       this.clearHandshakeTimeout()
       // Create the remote proxy now that connection is established
       const { remoteProxy } = connectRemoteProxy<TRemoteMethods>(
@@ -87,7 +94,9 @@ export class ConnectionSession<
         this.config.timeout || 30000
       )
       this.config.log?.(`✅ ConnectionSession established for participant: ${this.participantId}`)
+      this.config.log?.(`🔄 Resolving proxy promise for participant: ${this.participantId}`)
       this.proxyPromiseResolve(remoteProxy)
+      this.config.log?.(`✅ Proxy promise resolved for participant: ${this.participantId}`)
     })
 
     // Connection failed - reject proxy promise
@@ -100,12 +109,16 @@ export class ConnectionSession<
     // Destroy received - reset connection state
     this.lifecycle.on('destroyReceived', (fromParticipantId: string) => {
       this.config.log?.(`🔄 ConnectionSession received DESTROY from: ${fromParticipantId}`)
+      // Explicitly clear pairing state before destroying
+      this.store.set(this.pairedParticipantAtom, null)
+      this.store.set(this.handshakeCompletedAtom, false)
+      this.config.log?.(`🧹 Cleared pairing state for session: ${this.participantId}`)
       this.destroy()
     })
 
     // Paired with participant - update state
     this.lifecycle.on('pairedWith', (participantId: string) => {
-      this.handlerState.pairedParticipantId = participantId
+      this.store.set(this.pairedParticipantAtom, participantId)
       this.config.log?.(`🔄 Paired with participant: ${participantId}`)
     })
 
@@ -128,12 +141,10 @@ export class ConnectionSession<
       )
     })
 
-    this.lifecycle.on('sendDestroy', (fromParticipantId: string) => {
-      this.messenger.sendMessage(Messages.createDestroy(fromParticipantId))
-    })
-
-    this.lifecycle.on('sendMethodReply', (callId: string, isError: boolean, value: any) => {
-      this.messenger.sendMessage(Messages.createReply(callId, isError, value))
+    this.lifecycle.on('sendDestroy', (participantId: string) => {
+      this.messenger.sendMessage(Messages.createDestroy(participantId), (error) =>
+        this.config.log?.('Failed to send DESTROY message:', error)
+      )
     })
   }
 
@@ -145,7 +156,10 @@ export class ConnectionSession<
     }
 
     this.universalHandler = createUniversalMessageHandler(this.lifecycle, handlerConfig, () =>
-      Object.freeze({ ...this.handlerState })
+      Object.freeze({
+        pairedParticipantId: this.store.get(this.pairedParticipantAtom),
+        handshakeCompleted: this.store.get(this.handshakeCompletedAtom),
+      })
     )
 
     // Register with messenger
@@ -162,7 +176,7 @@ export class ConnectionSession<
     // Set up handshake timeout - directly reject promise
     const timeout = this.config.timeout || 10000
     this.timeoutId = setTimeout(() => {
-      if (!this.handlerState.handshakeCompleted) {
+      if (!this.store.get(this.handshakeCompletedAtom)) {
         this.config.log?.(
           `⏰ ConnectionSession handshake timeout for participant: ${this.participantId}`
         )
@@ -183,8 +197,12 @@ export class ConnectionSession<
     return this.proxyPromise
   }
 
+  isDestroyed(): boolean {
+    return this.destroyed
+  }
+
   sendDestroyMessage(): void {
-    if (this.handlerState.handshakeCompleted) {
+    if (this.store.get(this.handshakeCompletedAtom)) {
       this.lifecycle.emit('sendDestroy', this.participantId)
       this.config.log?.(`📤 Sending DESTROY for established session: ${this.participantId}`)
     } else {
@@ -194,14 +212,21 @@ export class ConnectionSession<
 
   // Clean teardown - the beauty of event-driven architecture!
   destroy(): void {
-    if (this.destroyed) return // Already destroyed
+    if (this.destroyed) {
+      this.config.log?.(`⏭️ Skipping destroy for already destroyed session: ${this.participantId}`)
+      return // Already destroyed
+    }
 
+    this.config.log?.(`🔥 Starting destroy for session: ${this.participantId}`)
     this.destroyed = true
+
+    // Remove self from registry FIRST to prevent automatic recreation during cleanup
+    this.config.log?.(`🗑️ Removing session ${this.participantId} from registry`)
+    this.registry.delete(this.targetWindow)
+
     this.sendDestroyMessage()
     this.config.log?.(`🧹 Destroying ConnectionSession for participant: ${this.participantId}`)
     this.messenger.destroy()
-    // Remove self from registry
-    this.registry.delete(this.targetWindow)
     this.config.log?.(`✅ ConnectionSession destroyed for participant: ${this.participantId}`)
   }
 }

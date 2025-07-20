@@ -9,11 +9,7 @@ import type { ConnectionSession } from './ConnectionSession'
 export class ConnectionRegistry {
   private registry = new WeakMap<Window, ConnectionSession<any, any>>()
   private cleanupRegistry = new FinalizationRegistry((session: ConnectionSession<any, any>) => {
-    try {
-      session.destroy()
-    } catch (_error) {
-      // Session might already be destroyed, ignore errors
-    }
+    session.destroy()
   })
   private windowAtoms = new WeakMap<Window, Atom<ConnectionSession<any, any> | null>>()
   private globalVersionAtom = atom(0)
@@ -22,7 +18,10 @@ export class ConnectionRegistry {
   /**
    * Get a reactive atom for a specific window's session
    */
-  get(targetWindow: Window): Atom<ConnectionSession<any, any> | null> {
+  get<
+    TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any>,
+    TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any>,
+  >(targetWindow: Window): Atom<ConnectionSession<TLocalMethods, TRemoteMethods> | null> {
     let windowAtom = this.windowAtoms.get(targetWindow)
     if (windowAtom) {
       return windowAtom
@@ -39,34 +38,9 @@ export class ConnectionRegistry {
   }
 
   /**
-   * Get existing session or create a new one using the provided factory, returns reactive atom
+   * Set session in registry
    */
-  getOrCreate<
-    TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any>,
-    TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any>,
-  >(
-    targetWindow: Window,
-    sessionFactory: () => ConnectionSession<TLocalMethods, TRemoteMethods>,
-    log?: (...args: unknown[]) => void
-  ): Atom<ConnectionSession<TLocalMethods, TRemoteMethods> | null> {
-    // Check if session already exists
-    const existingSession = this.registry.get(targetWindow)
-
-    if (!existingSession) {
-      log?.(`📝 Creating new connection to target window`)
-      const newSession = sessionFactory()
-      this.setSession(targetWindow, newSession)
-    } else {
-      log?.(`♻️ Reusing existing connection to target window`)
-    }
-
-    return this.get(targetWindow) as Atom<ConnectionSession<TLocalMethods, TRemoteMethods> | null>
-  }
-
-  /**
-   * Internal method to set session in registry
-   */
-  private setSession(targetWindow: Window, session: ConnectionSession<any, any>): void {
+  setSession(targetWindow: Window, session: ConnectionSession<any, any>): void {
     this.registry.set(targetWindow, session)
     this.cleanupRegistry.register(targetWindow, session)
     this.notifyChange() // Notify that session was added
@@ -91,3 +65,4 @@ export class ConnectionRegistry {
 
 // Global singleton instance
 export const connectionRegistry = new ConnectionRegistry()
+// @ts-ignore - Expose for debugging

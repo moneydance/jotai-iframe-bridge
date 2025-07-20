@@ -205,6 +205,9 @@ const IframeContainer = memo(
     setIframeElement: (element: HTMLIFrameElement | null) => void
   }) => {
     const bridge = useBridge()
+    console.log('isConnected', bridge.isConnected())
+    console.log('remoteProxyPromise', bridge.getRemoteProxyPromise())
+    // @ts-ignore
 
     // Handle iframe initialization when element becomes available and loaded
     useEffect(() => {

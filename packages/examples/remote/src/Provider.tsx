@@ -58,7 +58,7 @@ type AppProviderProps = {
 }
 
 export function AppProvider({ children, bridge, store = getDefaultStore() }: AppProviderProps) {
-  const defaultBridge = useMemo(() => bridge || createDefaultBridge(), [bridge])
+  const defaultBridge = useMemo(() => bridge || createDefaultBridge(store), [bridge, store])
   console.log(`🎯 AppProvider using bridge ID: ${defaultBridge.id}`)
 
   return (
@@ -69,4 +69,4 @@ export function AppProvider({ children, bridge, store = getDefaultStore() }: App
 }
 
 // Export types for convenience
-export type { ParentMethods, ChildMethods, BridgeConfig }
+export type { ChildMethods, ParentMethods, BridgeConfig }

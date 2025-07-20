@@ -6,6 +6,7 @@ import {
   createBridgeProvider,
 } from 'jotai-iframe-bridge'
 import type { ReactNode } from 'react'
+import { useMemo } from 'react'
 
 // Define strict types for type safety (converted from interfaces)
 type ParentMethods = {
@@ -57,7 +58,7 @@ type AppProviderProps = {
 }
 
 export function AppProvider({ children, bridge, store = getDefaultStore() }: AppProviderProps) {
-  const defaultBridge = bridge || createDefaultBridge()
+  const defaultBridge = useMemo(() => bridge || createDefaultBridge(store), [bridge, store])
   console.log(`🎯 AppProvider using bridge ID: ${defaultBridge.id}`)
 
   return (
