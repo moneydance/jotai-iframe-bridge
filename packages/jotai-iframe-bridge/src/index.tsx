@@ -1,7 +1,10 @@
 // ==================== Bridge ====================
 export { createBridge } from './bridge/Bridge'
-export type { Bridge, ConnectionConfig, LoadableAtom } from './bridge/types'
+export type { Bridge, LoadableAtom } from './bridge/types'
+export type { ConnectionConfig } from './connection/ConnectionSession'
 // ==================== Connection ====================
+export { ConnectionSession } from './connection/ConnectionSession'
+export { Messages } from './connection/Messages'
 export type {
   Ack1Message,
   Ack2Message,
@@ -18,4 +21,4 @@ export type {
 export type { BridgeProviderProps } from './react/Provider'
 export { createBridgeProvider } from './react/Provider'
 // ==================== Utils ====================
-export * from './utils'
+export { generateId, lazyLoadable } from './utils'

@@ -5,17 +5,6 @@ import type { loadable } from 'jotai/utils'
 import type { Methods, RemoteProxy } from '../connection/types'
 import type { LazyLoadable } from '../utils/lazyLoadable'
 
-// ==================== Bridge Configuration ====================
-
-export interface ConnectionConfig<
-  TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
-> {
-  allowedOrigins: string[]
-  methods?: TLocalMethods
-  timeout?: number
-  log?: (...args: unknown[]) => void
-}
-
 // ==================== Bridge Types ====================
 
 // Helper type representing ReturnType<typeof loadable<T>>

@@ -27,14 +27,26 @@ export class WindowMessenger {
     window.addEventListener('message', this.handleMessageFromRemoteWindow)
   }
 
-  sendMessage(message: Message, _transferables?: Transferable[]): void {
+  sendMessage(message: Message, onError?: (error: Error) => void): boolean {
     if (this.destroyed) {
-      throw new Error('WindowMessenger has been destroyed')
+      const error = new Error('WindowMessenger has been destroyed')
+      this.log?.('❌ Failed to send message: WindowMessenger destroyed', message)
+      onError?.(error)
+      return false
     }
 
-    const origin = this.getOriginForSendingMessage(message)
-    this.log?.('postMessage', message, origin)
-    this.remoteWindow.postMessage(message, origin)
+    try {
+      const origin = this.getOriginForSendingMessage(message)
+      this.log?.('📤 Sending message:', message.type, 'to origin:', origin)
+      this.remoteWindow.postMessage(message, origin)
+      this.log?.('✅ Message sent successfully:', message.type)
+      return true
+    } catch (error) {
+      const sendError = error instanceof Error ? error : new Error(String(error))
+      this.log?.('❌ Failed to send message:', message.type, 'Error:', sendError.message)
+      onError?.(sendError)
+      return false
+    }
   }
 
   addMessageHandler = (callback: (message: Message) => void): void => {
