@@ -101,16 +101,18 @@ export class WindowMessenger {
     }
 
     if (this.isAllowedOrigin(origin)) {
-      if (!this.concreteRemoteOrigin) {
-        this.concreteRemoteOrigin = origin
-        this.log?.('✅ Set concrete remote origin:', origin)
-      }
-
       if (isMessage(data)) {
         // Prevent self-messaging loops: ignore messages from same participant
         if (data.fromParticipantId === this.participantId) {
           return
         }
+
+        // Only set concrete remote origin for valid, non-self messages
+        if (!this.concreteRemoteOrigin) {
+          this.concreteRemoteOrigin = origin
+          this.log?.('✅ Set concrete remote origin:', origin)
+        }
+
         this.log?.(
           '✅ Valid message received, calling',
           this.messageCallbacks.size,

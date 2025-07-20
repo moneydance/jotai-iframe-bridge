@@ -7,11 +7,11 @@ function ConnectionStatus({ state }: { state: LazyLoadable<unknown>['state'] }) 
   const getStatusColor = () => {
     switch (state) {
       case 'uninitialized':
-        return 'bg-gray-500'
+        return 'bg-slate-500'
       case 'hasData':
-        return 'bg-green-500'
+        return 'bg-emerald-500'
       case 'loading':
-        return 'bg-yellow-500'
+        return 'bg-amber-500 animate-pulse'
       default:
         return 'bg-red-500'
     }
@@ -32,7 +32,7 @@ function ConnectionStatus({ state }: { state: LazyLoadable<unknown>['state'] }) 
 
   return (
     <span
-      className={`px-3 py-1 rounded-full text-white text-sm ${getStatusColor()}`}
+      className={`px-4 py-2 rounded-full text-white text-sm font-medium shadow-lg ${getStatusColor()}`}
       data-status={getStatusText()}
       data-testid="connection-status"
     >
@@ -42,24 +42,26 @@ function ConnectionStatus({ state }: { state: LazyLoadable<unknown>['state'] }) 
 }
 
 // Connection Section Helper Component
-function ConnectionSection({ result }: { result: number | null }) {
+function ConnectionSection({ onRefresh }: { onRefresh: () => void }) {
   const remoteProxyLoadable = useRemoteProxy()
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <span className="font-semibold">Connection Status: </span>
-          <ConnectionStatus state={remoteProxyLoadable.state} />
-        </div>
-        {result !== null && (
+    <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700/50 p-4 mb-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold text-white">Remote Application</h1>
           <div>
-            <span className="font-semibold">Last Result: </span>
-            <span className="text-green-600 font-bold text-lg" data-testid="calculation-result">
-              {result}
-            </span>
+            <span className="font-semibold text-slate-200">Status: </span>
+            <ConnectionStatus state={remoteProxyLoadable.state} />
           </div>
-        )}
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-violet-500/25"
+        >
+          🔄 Refresh
+        </button>
       </div>
     </div>
   )
@@ -72,12 +74,14 @@ function CalculationSection({
   onNumberAChange,
   onNumberBChange,
   onCalculate,
+  result,
 }: {
   numberA: number
   numberB: number
   onNumberAChange: (value: number) => void
   onNumberBChange: (value: number) => void
   onCalculate: () => void
+  result: number | null
 }) {
   const remoteProxyLoadable = useRemoteProxy()
 
@@ -86,38 +90,48 @@ function CalculationSection({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-      <h3 className="text-xl font-semibold text-gray-700 mb-4">Test Host Addition</h3>
+    <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl shadow-2xl border border-slate-700/50 p-4 mb-4">
+      <h3 className="text-lg font-semibold text-white mb-4">Test Host Addition</h3>
 
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-3 mb-4 items-center">
         <input
           type="number"
-          value={numberA}
-          onChange={(e) => onNumberAChange(Number(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded w-24"
+          value={numberA === 0 ? '' : numberA}
+          onChange={(e) => onNumberAChange(e.target.value === '' ? 0 : Number(e.target.value))}
+          className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg w-20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           placeholder="A"
           data-testid="number-a-input"
         />
-        <span className="py-2">+</span>
+        <span className="py-2 text-slate-300 font-medium">+</span>
         <input
           type="number"
-          value={numberB}
-          onChange={(e) => onNumberBChange(Number(e.target.value))}
-          className="px-3 py-2 border border-gray-300 rounded w-24"
+          value={numberB === 0 ? '' : numberB}
+          onChange={(e) => onNumberBChange(e.target.value === '' ? 0 : Number(e.target.value))}
+          className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg w-20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           placeholder="B"
           data-testid="number-b-input"
         />
         <button
           type="button"
           onClick={onCalculate}
-          className="px-4 py-2 bg-blue-500 text-white rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-500 hover:bg-blue-600"
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-blue-500/25"
           data-testid="calculate-add-button"
         >
           Calculate in Host
         </button>
+        {result !== null && (
+          <div className="ml-4 flex items-center">
+            <span className="text-slate-300 mr-2">=</span>
+            <span className="text-emerald-400 font-bold text-xl" data-testid="calculation-result">
+              {result}
+            </span>
+          </div>
+        )}
       </div>
 
-      <p className="text-sm text-gray-600">This will call the add method in the host application</p>
+      <p className="text-sm text-slate-400">
+        This will call the add method in the host application
+      </p>
     </div>
   )
 }
@@ -125,8 +139,8 @@ function CalculationSection({
 export function AppContent() {
   const bridge = useBridge()
   const [result, setResult] = useState<number | null>(null)
-  const [numberA, setNumberA] = useState<number>(15)
-  const [numberB, setNumberB] = useState<number>(7)
+  const [numberA, setNumberA] = useState<number>(0)
+  const [numberB, setNumberB] = useState<number>(0)
   const remoteProxyLoadable = useRemoteProxy()
 
   // Refresh UI state without disconnecting bridge
@@ -164,27 +178,9 @@ export function AppContent() {
   }, [remoteProxyLoadable, numberA, numberB])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Remote Application</h1>
-          <p className="text-gray-600">
-            This iframe can call addition in the host and provides subtraction
-          </p>
-
-          {/* Refresh Button */}
-          <div className="mt-4">
-            <button
-              type="button"
-              onClick={handleRefresh}
-              className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-            >
-              🔄 Refresh
-            </button>
-          </div>
-        </div>
-
-        <ConnectionSection result={result} />
+        <ConnectionSection onRefresh={handleRefresh} />
 
         <CalculationSection
           numberA={numberA}
@@ -192,6 +188,7 @@ export function AppContent() {
           onNumberAChange={setNumberA}
           onNumberBChange={setNumberB}
           onCalculate={testAddition}
+          result={result}
         />
       </div>
     </div>

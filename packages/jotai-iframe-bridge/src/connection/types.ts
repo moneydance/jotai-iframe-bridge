@@ -84,7 +84,9 @@ export function isMessage(data: unknown): data is Message {
     data !== null &&
     'namespace' in data &&
     'type' in data &&
-    (data as Record<string, unknown>).namespace === NAMESPACE
+    'fromParticipantId' in data &&
+    (data as Record<string, unknown>).namespace === NAMESPACE &&
+    typeof (data as Record<string, unknown>).fromParticipantId === 'string'
   )
 }
 
