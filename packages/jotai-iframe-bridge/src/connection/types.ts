@@ -15,21 +15,27 @@ export const NAMESPACE = 'jotai-iframe-bridge'
 
 type MessageBase = {
   namespace: string
+  fromParticipantId: string
   channel?: string
 }
 
 export type SynMessage = MessageBase & {
   type: 'SYN'
-  participantId: string
 }
 
 export type Ack1Message = MessageBase & {
   type: 'ACK1'
+  toParticipantId: string // Host's participant ID (from SYN)
   methodPaths?: string[]
 }
 
 export type Ack2Message = MessageBase & {
   type: 'ACK2'
+  toParticipantId: string // Child's participant ID (from ACK1)
+}
+
+export type DestroyMessage = MessageBase & {
+  type: 'DESTROY'
 }
 
 export type CallMessage = MessageBase & {
@@ -52,10 +58,6 @@ export type ReplyMessage = MessageBase & {
         isError: true
       }
   )
-
-export type DestroyMessage = MessageBase & {
-  type: 'DESTROY'
-}
 
 export type Message =
   | SynMessage
@@ -82,7 +84,9 @@ export function isMessage(data: unknown): data is Message {
     data !== null &&
     'namespace' in data &&
     'type' in data &&
-    (data as Record<string, unknown>).namespace === NAMESPACE
+    'fromParticipantId' in data &&
+    (data as Record<string, unknown>).namespace === NAMESPACE &&
+    typeof (data as Record<string, unknown>).fromParticipantId === 'string'
   )
 }
 
@@ -96,6 +100,10 @@ export function isAck1Message(message: Message): message is Ack1Message {
 
 export function isAck2Message(message: Message): message is Ack2Message {
   return message.type === 'ACK2'
+}
+
+export function isDestroyMessage(message: Message): message is DestroyMessage {
+  return message.type === 'DESTROY'
 }
 
 export function isCallMessage(message: Message): message is CallMessage {

@@ -20,21 +20,19 @@ async function isRemoteAppRunning(): Promise<boolean> {
   }
 }
 
-// Helper function to wait for UI to show connected state
+// Helper function to wait for UI to show connected state and verify functionality
 async function waitForIframeConnection(bridge: Bridge<ParentMethods, ChildMethods>) {
   try {
     console.log(`⏳ Waiting for bridge ${bridge.id} UI to show connected...`)
-
-    // Wait for the UI to reflect the connected state
+    // Wait for the host UI to reflect the connected state
     await waitFor(
       () => {
         expect(screen.getByTestId('connection-status')).toHaveTextContent('connected')
       },
-      { timeout: 2000 }
+      { timeout: 5000 }
     )
-    console.log(`✅ Bridge ${bridge.id} UI shows connected!`)
   } catch (error) {
-    console.error(`❌ Bridge ${bridge.id} UI connection failed:`, error)
+    console.error(`❌ Error waiting for bridge ${bridge.id} UI to show connected:`, error)
     throw error
   }
 }
@@ -52,19 +50,20 @@ describe('AppContent - Real UI Testing', () => {
   beforeEach(() => {
     // Create fresh instances for each test to ensure isolation
     testStore = createStore()
-    testBridge = createDefaultBridge(testStore)
+    // Use a small handshake delay for testing to see state transitions
+    testBridge = createDefaultBridge(testStore) // 100ms delay
     console.log(`🔬 Test setup created bridge ID: ${testBridge.id}`)
   })
 
   afterEach(() => {
-    testBridge.destroy()
+    testBridge.refresh()
   })
 
   test('renders initial UI correctly', () => {
     renderApp(<AppContent />, { bridge: testBridge, store: testStore })
     expect(screen.getByText('Host Application')).toBeInTheDocument()
     expect(screen.getByTestId('connection-status')).toHaveTextContent('connecting')
-    expect(screen.getByTestId('connect-button')).toBeInTheDocument()
+    expect(screen.getByText('🔄 Refresh')).toBeInTheDocument()
   })
 
   test('status goes to connected when iframe is loaded', async () => {
@@ -75,14 +74,6 @@ describe('AppContent - Real UI Testing', () => {
     })
     await waitForIframeConnection(testBridge)
     expect(screen.getByTestId('connection-status')).toHaveTextContent('connected')
-  })
-
-  test('can click connect button and see status change', async () => {
-    const user = userEvent.setup()
-    renderApp(<AppContent />, { bridge: testBridge, store: testStore })
-    const connectButton = screen.getByTestId('connect-button')
-    await user.click(connectButton)
-    expect(screen.getByTestId('connection-status')).toHaveTextContent('connecting')
   })
 
   test('calculation inputs are present and functional', async () => {
@@ -128,4 +119,114 @@ describe('AppContent - Real UI Testing', () => {
       expect(result).toHaveTextContent('10')
     })
   })
+
+  test(
+    'refresh button resets bridge and calculations still work',
+    async () => {
+      const user = userEvent.setup()
+      renderApp(<AppContent />, { bridge: testBridge, store: testStore })
+      await waitForIframeConnection(testBridge)
+
+      // Test initial calculation works
+      const inputA = screen.getByTestId('number-a-input')
+      const inputB = screen.getByTestId('number-b-input')
+      const calculateButton = screen.getByTestId('calculate-subtract-button')
+
+      await user.clear(inputA)
+      await user.type(inputA, '15')
+      await user.clear(inputB)
+      await user.type(inputB, '5')
+      await user.click(calculateButton)
+
+      // Wait for initial result to appear
+      await waitFor(() => {
+        const result = screen.getByTestId('calculation-result')
+        expect(result).toHaveTextContent('10')
+      })
+
+      // Click refresh button
+      const refreshButton = screen.getByText('🔄 Refresh')
+      await user.click(refreshButton)
+
+      // Wait for reconnection - inputs will disappear then reappear
+      await waitForIframeConnection(testBridge)
+
+      // Re-query elements after reconnection (they were removed/re-added during reset)
+      // Verify calculations still work after refresh by trying a new calculation
+      await user.clear(screen.getByTestId('number-a-input'))
+      await user.type(screen.getByTestId('number-a-input'), '20')
+      await user.clear(screen.getByTestId('number-b-input'))
+      await user.type(screen.getByTestId('number-b-input'), '8')
+
+      // Try to calculate - this will test if the bridge actually reconnected
+      await user.click(screen.getByTestId('calculate-subtract-button'))
+
+      // Wait for result - with longer timeout since reconnection might be slow in tests
+      await waitFor(
+        () => {
+          const result = screen.getByTestId('calculation-result')
+          expect(result).toHaveTextContent('12')
+        },
+        { timeout: 10000 }
+      )
+    },
+    {
+      timeout: 15000,
+    }
+  )
+
+  test(
+    'iframe refresh button resets iframe and calculations still work',
+    async () => {
+      const user = userEvent.setup()
+      renderApp(<AppContent />, { bridge: testBridge, store: testStore })
+      await waitForIframeConnection(testBridge)
+
+      // Test initial calculation works
+      const inputA = screen.getByTestId('number-a-input')
+      const inputB = screen.getByTestId('number-b-input')
+      const calculateButton = screen.getByTestId('calculate-subtract-button')
+
+      await user.clear(inputA)
+      await user.type(inputA, '25')
+      await user.clear(inputB)
+      await user.type(inputB, '10')
+      await user.click(calculateButton)
+
+      // Wait for initial result to appear
+      await waitFor(() => {
+        const result = screen.getByTestId('calculation-result')
+        expect(result).toHaveTextContent('15')
+      })
+
+      // Click iframe refresh button (not the regular refresh button)
+      const iframeRefreshButton = screen.getByText('🔄 Refresh Iframe')
+      await user.click(iframeRefreshButton)
+
+      // Wait for reconnection - iframe refresh should trigger disconnect/reconnect
+      await waitForIframeConnection(testBridge)
+
+      // Verify calculations still work after iframe refresh
+      // Re-query elements after iframe refresh (they were removed/re-added during refresh)
+      await user.clear(screen.getByTestId('number-a-input'))
+      await user.type(screen.getByTestId('number-a-input'), '100')
+      await user.clear(screen.getByTestId('number-b-input'))
+      await user.type(screen.getByTestId('number-b-input'), '30')
+
+      // Try to calculate - this will test if the bridge properly reconnected after iframe refresh
+      await user.click(screen.getByTestId('calculate-subtract-button'))
+
+      // Wait for result - with longer timeout since iframe refresh might be slow
+      await waitFor(
+        () => {
+          const result = screen.getByTestId('calculation-result')
+          expect(result).toHaveTextContent('70')
+        },
+        { timeout: 12000 }
+      )
+    },
+    {
+      timeout: 20000,
+    }
+  )
 })

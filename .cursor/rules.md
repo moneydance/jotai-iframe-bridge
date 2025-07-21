@@ -347,6 +347,125 @@ npm test
 cd packages/package-name && npm test
 ```
 
+### Modern Testing Best Practices
+
+#### CRITICAL: Use Spies, Not Monkey-Patching
+- **ALWAYS use `vi.spyOn(object, 'method')` to spy on existing methods**
+- **NEVER replace entire objects or monkey-patch global objects**
+- Use `vi.restoreAllMocks()` in `afterEach()` to clean up spies
+- Spies preserve the real object behavior while allowing observation
+
+```typescript
+// ✅ Good - Real spies on actual objects (browser APIs, Node APIs, etc.)
+const postMessageSpy = vi.spyOn(window, 'postMessage')
+const fetchSpy = vi.spyOn(global, 'fetch')
+const consoleLogSpy = vi.spyOn(console, 'log')
+
+// Create instance with real dependencies
+const service = new ApiService(window, config)
+
+// Clean up properly
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+// ❌ Bad - Monkey-patching global objects
+globalThis.window = mockWindow as any
+globalThis.fetch = mockFetch as any
+
+// ❌ Bad - Replacing entire objects
+const mockWindow = { postMessage: vi.fn() }
+const mockConsole = { log: vi.fn() }
+```
+
+#### CRITICAL: Test Only Public Interfaces
+- **NEVER access private properties using `(object as any).privateProperty`**
+- **NEVER call private methods directly**
+- Test observable behavior, not implementation details
+- Focus on inputs, outputs, and side effects that users can observe
+
+```typescript
+// ✅ Good - Testing through public interface
+const mockCallback = vi.fn()
+service.onDataReceived(mockCallback)
+
+// Trigger behavior through public methods
+await service.fetchData('user-123')
+
+// Verify observable behavior
+expect(mockCallback).toHaveBeenCalledWith(expectedData)
+expect(fetchSpy).toHaveBeenCalledWith('/api/users/user-123')
+
+// ❌ Bad - Testing implementation details
+expect((service as any).internalCache.size).toBe(1)
+expect((service as any).isProcessing).toBe(false)
+;(service as any).handleInternalEvent(mockEvent)
+```
+
+#### Event-Driven Code Testing Patterns
+- **Use real constructors for events**: `new MouseEvent()`, `new MessageEvent()`, `new CustomEvent()`
+- **Capture real handlers from spies**: `addEventListenerSpy.mock.calls[0][1]`
+- **Test validation through observable behavior**, not internal state
+- **Use proper event simulation** rather than direct method calls
+
+```typescript
+// ✅ Good - Real event simulation for any event-driven code
+beforeEach(() => {
+  component = new EventDrivenComponent(element, config)
+
+  // Capture the real event handler that was registered
+  expect(addEventListenerSpy).toHaveBeenCalledWith('click', expect.any(Function))
+  clickHandler = addEventListenerSpy.mock.calls[0][1] as (event: MouseEvent) => void
+})
+
+// Test with real events
+const clickEvent = new MouseEvent('click', { bubbles: true })
+clickHandler(clickEvent)
+
+// ❌ Bad - Direct method calls bypassing event system
+;(component as any).handleClick({ target: mockElement })
+```
+
+#### Testing Input Validation and Filtering
+- **Test validation by verifying expected behavior occurs or doesn't occur**
+- **Test filtering by observing what gets processed vs rejected**
+- **Use observable side effects** rather than internal state inspection
+- **Validate through public API responses** and callback behavior
+
+```typescript
+// ✅ Good - Testing validation through observable behavior
+it('should reject invalid input and not process it', () => {
+  const invalidData = { malformed: true }
+  const onSuccessCallback = vi.fn()
+  const onErrorCallback = vi.fn()
+
+  processor.process(invalidData, onSuccessCallback, onErrorCallback)
+
+  // Observable behavior: error callback called, success callback not called
+  expect(onErrorCallback).toHaveBeenCalledWith(expect.stringContaining('invalid'))
+  expect(onSuccessCallback).not.toHaveBeenCalled()
+})
+
+// ✅ Good - Testing filtering through absence of side effects
+it('should filter out unwanted items', () => {
+  const mixedData = [validItem, invalidItem, anotherValidItem]
+  const resultCallback = vi.fn()
+
+  processor.processAll(mixedData, resultCallback)
+
+  // Observable behavior: only valid items trigger callback
+  expect(resultCallback).toHaveBeenCalledTimes(2)
+  expect(resultCallback).toHaveBeenCalledWith(validItem)
+  expect(resultCallback).toHaveBeenCalledWith(anotherValidItem)
+})
+```
+
+#### When Implementation Details Testing is Acceptable
+- **Never acceptable** - Always find a way to test through public interfaces
+- If you can't test something through the public API, question if it needs testing
+- Consider if the "untestable" code should be refactored to be more observable
+- Focus on the contract your code provides to its consumers
+
 ## 3. Code Architecture & Structure
 
 ### File and Folder Structure Guidelines

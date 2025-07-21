@@ -6,6 +6,7 @@ import {
   createBridgeProvider,
 } from 'jotai-iframe-bridge'
 import type { ReactNode } from 'react'
+import { useMemo } from 'react'
 
 // Define strict types for type safety (converted from interfaces)
 type ChildMethods = {
@@ -23,10 +24,10 @@ function createBridgeConfig(): ConnectionConfig<ChildMethods> {
     methods: {
       subtract: async (a: number, b: number) => {
         const result = a - b
-        console.log(`Child: ${a} - ${b} = ${result}`)
         return result
       },
     },
+    handshakeDelay: Math.random() * 2000, // Random delay to simulate network latency
     log: (...args: unknown[]) => console.log('🚌 Child Bridge:', ...args),
   }
 }
@@ -57,8 +58,7 @@ type AppProviderProps = {
 }
 
 export function AppProvider({ children, bridge, store = getDefaultStore() }: AppProviderProps) {
-  const defaultBridge = bridge || createDefaultBridge()
-  console.log(`🎯 AppProvider using bridge ID: ${defaultBridge.id}`)
+  const defaultBridge = useMemo(() => bridge || createDefaultBridge(store), [bridge, store])
 
   return (
     <Provider store={store}>
@@ -68,4 +68,4 @@ export function AppProvider({ children, bridge, store = getDefaultStore() }: App
 }
 
 // Export types for convenience
-export type { ParentMethods, ChildMethods, BridgeConfig }
+export type { ChildMethods, ParentMethods, BridgeConfig }

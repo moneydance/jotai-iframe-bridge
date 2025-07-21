@@ -1,37 +1,13 @@
 import { generateId, safeAssignment } from '../utils'
+import { Messages } from './Messages'
 import type { WindowMessenger } from './messaging'
-import type {
-  CallMessage,
-  Message,
-  MethodPath,
-  Methods,
-  RemoteProxy,
-  ReplyHandler,
-  ReplyMessage,
-} from './types'
-import { isCallMessage, isReplyMessage, NAMESPACE } from './types'
+import type { Message, MethodPath, Methods, RemoteProxy, ReplyHandler } from './types'
+import { isReplyMessage } from './types'
 
 // ==================== Helper Functions ====================
 
 function formatMethodPath(methodPath: string[]): string {
   return methodPath.join('.')
-}
-
-function getMethodAtMethodPath(
-  methodPath: string[],
-  // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
-  methods: Record<string, any>
-  // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
-): ((...args: any[]) => any) | undefined {
-  // biome-ignore lint/suspicious/noExplicitAny: Dynamic property traversal requires any for safe property access
-  let current: any = methods
-  for (const prop of methodPath) {
-    current = current?.[prop]
-    if (current === undefined) {
-      return undefined
-    }
-  }
-  return typeof current === 'function' ? current : undefined
 }
 
 // ==================== Remote Proxy Creation ====================
@@ -80,6 +56,7 @@ export function createRemoteProxy<T extends Methods>(
 export function connectRemoteProxy<T extends Methods>(
   messenger: WindowMessenger,
   channel: string | undefined,
+  participantId: string,
   log?: (...args: unknown[]) => void,
   timeout = 30000
 ): { remoteProxy: RemoteProxy<T>; destroy: () => void } {
@@ -123,14 +100,7 @@ export function connectRemoteProxy<T extends Methods>(
     return new Promise((resolve, reject) => {
       const callId = generateId()
 
-      const callMessage: CallMessage = {
-        namespace: NAMESPACE,
-        channel,
-        type: 'CALL',
-        id: callId,
-        methodPath,
-        args,
-      }
+      const callMessage = Messages.createCall(callId, participantId, methodPath, args, channel)
 
       const replyHandler: ReplyHandler = {
         methodPath,
@@ -194,119 +164,5 @@ export function connectRemoteProxy<T extends Methods>(
   return {
     remoteProxy,
     destroy,
-  }
-}
-
-// ==================== Call Handler ====================
-
-interface CallHandlerConfig {
-  messenger: WindowMessenger
-  methods: Methods
-  channel: string | undefined
-  log?: (...args: unknown[]) => void
-}
-
-interface CallHandlerState {
-  isDestroyed: boolean
-}
-
-async function executeMethodCall(
-  message: CallMessage,
-  methods: Methods,
-  channel: string | undefined
-): Promise<ReplyMessage> {
-  const { methodPath, args, id: callId } = message
-
-  try {
-    const method = getMethodAtMethodPath(methodPath, methods)
-
-    if (!method) {
-      throw new Error(`Method \`${formatMethodPath(methodPath)}\` is not found.`)
-    }
-
-    const value = await method(...args)
-
-    return {
-      namespace: NAMESPACE,
-      channel,
-      type: 'REPLY',
-      callId,
-      value,
-    }
-  } catch (error) {
-    return {
-      namespace: NAMESPACE,
-      channel,
-      type: 'REPLY',
-      callId,
-      value: error instanceof Error ? error.message : String(error),
-      isError: true,
-    }
-  }
-}
-
-function sendReplyMessage(
-  replyMessage: ReplyMessage,
-  config: CallHandlerConfig,
-  methodPath: MethodPath
-): void {
-  const { messenger, log } = config
-
-  const [ok, sendError] = safeAssignment(() => {
-    log?.(`Sending ${formatMethodPath(methodPath)}() reply`, replyMessage)
-    messenger.sendMessage(replyMessage)
-  })
-
-  if (!ok) {
-    log?.('Failed to send reply:', sendError)
-  }
-}
-
-function createCallMessageHandler(
-  config: CallHandlerConfig,
-  state: CallHandlerState
-): (message: Message) => Promise<void> {
-  const { methods, channel, log } = config
-
-  return async (message: Message) => {
-    if (state.isDestroyed || !isCallMessage(message)) {
-      return
-    }
-
-    log?.(`Received ${formatMethodPath(message.methodPath)}() call`, message)
-
-    const replyMessage = await executeMethodCall(message, methods, channel)
-
-    if (state.isDestroyed) {
-      return
-    }
-
-    sendReplyMessage(replyMessage, config, message.methodPath)
-  }
-}
-
-export function connectCallHandler(
-  messenger: WindowMessenger,
-  methods: Methods,
-  channel: string | undefined,
-  log?: (...args: unknown[]) => void
-): () => void {
-  const config: CallHandlerConfig = {
-    messenger,
-    methods,
-    channel,
-    log,
-  }
-
-  const state: CallHandlerState = {
-    isDestroyed: false,
-  }
-
-  const handleMessage = createCallMessageHandler(config, state)
-  messenger.addMessageHandler(handleMessage)
-
-  return () => {
-    state.isDestroyed = true
-    messenger.removeMessageHandler(handleMessage)
   }
 }

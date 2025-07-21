@@ -1,5 +1,5 @@
-export * from './Connection'
-export * from './handshake'
+export { ConnectionSession } from './ConnectionSession'
+export { Messages } from './Messages'
 export * from './messaging'
 export * from './proxy'
 export * from './types'
