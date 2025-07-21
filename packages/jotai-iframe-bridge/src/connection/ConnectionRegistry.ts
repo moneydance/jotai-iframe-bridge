@@ -57,10 +57,16 @@ export class ConnectionRegistry {
     targetWindow: Window,
     sessionFactory: () => ConnectionSession<TLocalMethods, TRemoteMethods>
   ): ConnectionSession<TLocalMethods, TRemoteMethods> {
-    // Check if session already exists
+    // Check if session already exists and is not destroyed
     const existingSession = this.registry.get(targetWindow)
-    if (existingSession) {
+    if (existingSession && !existingSession.isDestroyed()) {
       return existingSession as ConnectionSession<TLocalMethods, TRemoteMethods>
+    }
+
+    // Clean up destroyed session from registry
+    if (existingSession?.isDestroyed()) {
+      this.registry.delete(targetWindow)
+      this.notifyChange()
     }
 
     // Create new session using the factory

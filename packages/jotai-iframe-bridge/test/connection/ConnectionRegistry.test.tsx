@@ -1,7 +1,7 @@
 import { createStore, getDefaultStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ConnectionRegistry } from '../src/connection/ConnectionRegistry'
-import type { ConnectionSession } from '../src/connection/ConnectionSession'
+import { ConnectionRegistry } from '../../src/connection/ConnectionRegistry'
+import type { ConnectionSession } from '../../src/connection/ConnectionSession'
 
 // Mock window for testing
 const createMockWindow = (): Window => {
