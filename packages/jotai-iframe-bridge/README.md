@@ -7,9 +7,11 @@ A robust iframe communication bridge with type-safe API and reactive state manag
 - **Type-safe communication** between parent and child iframes
 - **Reactive state management** with Jotai atoms
 - **Robust three-way handshake protocol** for reliable connection establishment
-- **Automatic reconnection support** for iframe reloads
-- **React hooks** for easy integration
+- **Automatic reconnection support** with `refresh()` method
+- **Clean iframe lifecycle management** with `disconnect()` method
+- **React hooks** for seamless integration
 - **Bidirectional method calls** with Promise-based API
+- **Unified bridge API** - same interface for both parent and child
 
 ## Three-Way Handshake Protocol
 
@@ -55,12 +57,12 @@ This library implements a sophisticated handshake protocol inspired by Penpal to
 Here's what a successful handshake looks like in the logs:
 
 ```
-🚌 Host Bridge: Sending SYN message { "participantId": "itmpknos1", "type": "SYN" }
-🚌 Child Bridge: Sending SYN message { "participantId": "93ym8wst9", "type": "SYN" }
+🚌 Host Bridge: 📤 Sending message: SYN to origin: *
+🚌 Child Bridge: 📤 Sending message: SYN to origin: *
 
 🚌 Host Bridge: Received SYN message from participant: 93ym8wst9
 🚌 Host Bridge: Leadership check: itmpknos1 > 93ym8wst9 = true
-🚌 Host Bridge: Sending ACK1 message as leader
+🚌 Host Bridge: 📤 Sending message: ACK1 to origin: http://localhost:5174
 
 🚌 Child Bridge: Received ACK1 message, sending ACK2 response
 🚌 Child Bridge: Connection established successfully (follower)
@@ -74,7 +76,7 @@ Here's what a successful handshake looks like in the logs:
 ### Parent (Host) Application
 
 ```tsx
-import { createParentBridge, makeParentBridgeHooks } from 'jotai-iframe-bridge'
+import { createBridge, createBridgeProvider } from 'jotai-iframe-bridge'
 
 // Define method interfaces
 interface ParentMethods {
@@ -85,48 +87,63 @@ interface ChildMethods {
   subtract: (a: number, b: number) => Promise<number>
 }
 
+
+
 // Create bridge
-const bridge = createParentBridge<ParentMethods, ChildMethods>({
+const bridge = createBridge<ParentMethods, ChildMethods>({
   allowedOrigins: ['*'],
   methods: {
-    add: async (a, b) => a + b
-  }
+    add: async (a: number, b: number) => a + b
+  },
+  log: (...args: unknown[]) => console.log('🚌 Host Bridge:', ...args)
 })
 
 // Create provider and hooks
-const { ParentBridgeProvider, hooks } = makeParentBridgeHooks(bridge)
-const { useParentBridge, useRemoteProxy, useConnection } = hooks
+const { BridgeProvider, hooks } = createBridgeProvider<ParentMethods, ChildMethods>()
+const { useBridge, useRemoteProxy } = hooks
 
 function App() {
   return (
-    <ParentBridgeProvider>
+    <BridgeProvider bridge={bridge}>
       <MyComponent />
-    </ParentBridgeProvider>
+    </BridgeProvider>
   )
 }
 
 function MyComponent() {
-  const bridge = useParentBridge()
-  const remoteProxy = useRemoteProxy()
+  const bridge = useBridge()
+  const remoteProxyLoadable = useRemoteProxy()
+  const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
 
-  const handleIframeRef = (iframe: HTMLIFrameElement | null) => {
-    if (iframe?.contentWindow) {
-      bridge.init(iframe)
-      bridge.connect()
+  // Handle iframe connection
+  useEffect(() => {
+    if (!iframeElement?.contentWindow) return
+
+    const contentWindow = iframeElement.contentWindow
+    bridge.connect(contentWindow)
+
+    return () => {
+      // Clean disconnect on component unmount
+      bridge.disconnect()
+    }
+  }, [bridge, iframeElement?.contentWindow])
+
+  const callChildMethod = async () => {
+    if (remoteProxyLoadable.state === 'hasData') {
+      const result = await remoteProxyLoadable.data.subtract(10, 3)
+      console.log('Result:', result) // 7
     }
   }
 
-  const callChildMethod = async () => {
-    if (remoteProxy.state === 'hasData') {
-      const result = await remoteProxy.data.subtract(10, 3)
-      console.log('Result:', result) // 7
-    }
+  const refreshConnection = () => {
+    bridge.refresh() // Reconnect to same iframe
   }
 
   return (
     <div>
       <iframe ref={handleIframeRef} src="/child.html" />
       <button onClick={callChildMethod}>Call Child Method</button>
+      <button onClick={refreshConnection}>🔄 Refresh Connection</button>
     </div>
   )
 }
@@ -135,39 +152,42 @@ function MyComponent() {
 ### Child (Iframe) Application
 
 ```tsx
-import { createChildBridge, makeChildBridgeHooks } from 'jotai-iframe-bridge'
+import { createBridge, createBridgeProvider } from 'jotai-iframe-bridge'
+
 
 // Create bridge
-const bridge = createChildBridge<ChildMethods, ParentMethods>({
-  parentOrigin: '*',
+const bridge = createBridge<ChildMethods, ParentMethods>({
+  allowedOrigins: ['*'],
   methods: {
-    subtract: async (a, b) => a - b
-  }
+    subtract: async (a: number, b: number) => a - b
+  },
+  log: (...args: unknown[]) => console.log('🚌 Child Bridge:', ...args)
 })
 
 // Create provider and hooks
-const { ChildBridgeProvider, hooks } = makeChildBridgeHooks(bridge)
-const { useChildBridge, useRemoteProxy } = hooks
+const { BridgeProvider, hooks } = createBridgeProvider<ChildMethods, ParentMethods>()
+const { useBridge, useRemoteProxy } = hooks
 
 function App() {
   return (
-    <ChildBridgeProvider>
+    <BridgeProvider bridge={bridge}>
       <MyComponent />
-    </ChildBridgeProvider>
+    </BridgeProvider>
   )
 }
 
 function MyComponent() {
-  const bridge = useChildBridge()
-  const remoteProxy = useRemoteProxy()
+  const bridge = useBridge()
+  const remoteProxyLoadable = useRemoteProxy()
 
+  // Auto-connect to parent window
   useEffect(() => {
-    bridge.connect()
+    bridge.connect() // Connects to parent window automatically
   }, [bridge])
 
   const callParentMethod = async () => {
-    if (remoteProxy.state === 'hasData') {
-      const result = await remoteProxy.data.add(5, 3)
+    if (remoteProxyLoadable.state === 'hasData') {
+      const result = await remoteProxyLoadable.data.add(5, 3)
       console.log('Result:', result) // 8
     }
   }
@@ -178,60 +198,125 @@ function MyComponent() {
 }
 ```
 
+## Bridge Lifecycle Management
+
+### Connection Methods
+
+```typescript
+// Connect to a target window
+bridge.connect(targetWindow?: Window)
+
+// Check connection status
+bridge.isConnected(): boolean
+
+// Refresh connection (reconnect to same window)
+bridge.refresh()
+
+// Disconnect cleanly (for component unmount)
+bridge.disconnect()
+
+// Destroy bridge completely
+bridge.destroy()
+```
+
+### Proper Iframe Lifecycle
+
+```tsx
+// ✅ Correct iframe lifecycle management
+useEffect(() => {
+  if (!iframeElement?.contentWindow) return
+
+  bridge.connect(iframeElement.contentWindow)
+
+  return () => {
+    // Always disconnect on unmount to prevent memory leaks
+    bridge.disconnect()
+  }
+}, [bridge, iframeElement?.contentWindow])
+
+// ✅ Iframe refresh pattern
+const refreshIframe = useCallback(() => {
+  setIframeKey(prev => prev + 1) // Force remount
+  setIframeElement(null) // Clear stale reference
+}, [])
+
+// Component that remounts on key change
+<iframe
+  key={iframeKey}
+  ref={setIframeElement}
+  src={REMOTE_URL}
+/>
+```
+
 ## API Reference
 
-### `createParentBridge<TLocalMethods, TRemoteMethods>(config, store?)`
+### Core Bridge API
 
-Creates a parent bridge for iframe communication.
+#### `createBridge<TLocalMethods, TRemoteMethods>(config, store?)`
+
+Creates a bridge for iframe communication (works for both parent and child).
 
 **Parameters:**
 - `config: ConnectionConfig<TLocalMethods>` - Bridge configuration
 - `store?: Store` - Optional Jotai store
 
-**Returns:** `ParentBridge<TLocalMethods, TRemoteMethods>`
+**Returns:** `Bridge<TLocalMethods, TRemoteMethods>`
 
-### `createChildBridge<TLocalMethods, TRemoteMethods>(config, store?)`
+**Bridge Interface:**
+```typescript
+interface Bridge<TLocalMethods, TRemoteMethods> {
+  id: string
+  connect(targetWindow?: Window): void
+  isConnected(): boolean
+  getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> | null
+  getRemoteProxyAtom(): Atom<LazyLoadable<RemoteProxy<TRemoteMethods>>>
+  refresh(): void      // Reconnect to same window
+  disconnect(): void   // Clean disconnect
+  destroy(): void      // Complete destruction
+}
+```
 
-Creates a child bridge for iframe communication.
+#### `createBridgeProvider<TLocalMethods, TRemoteMethods>()`
 
-**Parameters:**
-- `config: ChildConnectionConfig<TLocalMethods>` - Bridge configuration
-- `store?: Store` - Optional Jotai store
-
-**Returns:** `ChildBridge<TLocalMethods, TRemoteMethods>`
-
-### Factory Functions
-
-#### `makeParentBridgeHooks(bridge)`
-
-Creates React provider and hooks for ParentBridge.
+Creates React provider and hooks for Bridge.
 
 **Returns:**
 ```tsx
 {
-  ParentBridgeProvider: React.Component,
+  BridgeProvider: React.Component,
   hooks: {
-    useParentBridge: () => ParentBridge,
-    useRemoteProxy: () => Loadable<RemoteProxy>,
-    useConnection: () => Loadable<Connection>,
-    useChildReady: () => boolean
+    useBridge: () => Bridge<TLocalMethods, TRemoteMethods>,
+    useRemoteProxy: () => LazyLoadable<RemoteProxy<TRemoteMethods>>
   }
 }
 ```
 
-#### `makeChildBridgeHooks(bridge)`
+### LazyLoadable State
 
-Creates React provider and hooks for ChildBridge.
+The `useRemoteProxy` hook returns a `LazyLoadable` with these states:
 
-**Returns:**
+```typescript
+type LazyLoadable<T> =
+  | { state: 'uninitialized' }
+  | { state: 'loading' }
+  | { state: 'hasData', data: T }
+  | { state: 'hasError', error: Error }
+```
+
+**Usage:**
 ```tsx
-{
-  ChildBridgeProvider: React.Component,
-  hooks: {
-    useChildBridge: () => ChildBridge,
-    useRemoteProxy: () => Loadable<RemoteProxy>,
-    useConnection: () => Loadable<Connection>
-  }
+const remoteProxy = useRemoteProxy()
+
+switch (remoteProxy.state) {
+  case 'uninitialized':
+    return <div>Not connected</div>
+  case 'loading':
+    return <div>Connecting...</div>
+  case 'hasData':
+    // remoteProxy.data is fully typed RemoteProxy
+    return <button onClick={() => remoteProxy.data.someMethod()}>Call Method</button>
+  case 'hasError':
+    return <div>Error: {remoteProxy.error.message}</div>
 }
 ```
 
@@ -241,21 +326,84 @@ Creates React provider and hooks for ChildBridge.
 
 ```tsx
 interface ConnectionConfig<TLocalMethods> {
-  allowedOrigins: string[]      // Origins that can connect
-  methods?: TLocalMethods       // Methods to expose
-  timeout?: number             // Connection timeout (default: 15000ms)
-  log?: (...args: any[]) => void // Custom logger
+  allowedOrigins?: (string | RegExp)[]  // Origins that can connect (default: [window.origin])
+  methods?: TLocalMethods               // Methods to expose
+  timeout?: number                      // Connection timeout (default: 10000ms)
+  handshakeDelay?: number              // Artificial delay for testing (default: 0)
+  log?: (...args: unknown[]) => void   // Custom logger
 }
 ```
 
-### `ChildConnectionConfig<TLocalMethods>`
+**Example:**
+```tsx
+const config = {
+  allowedOrigins: ['*'], // Allow all origins (use specific origins in production)
+  methods: {
+    add: async (a: number, b: number) => a + b
+  },
+  timeout: 15000, // 15 second timeout
+  log: (...args) => console.log('Bridge:', ...args)
+}
+```
+
+## Advanced Usage
+
+### Iframe Refresh Integration
 
 ```tsx
-interface ChildConnectionConfig<TLocalMethods> {
-  parentOrigin: string | string[]  // Parent origin(s)
-  methods?: TLocalMethods          // Methods to expose
-  timeout?: number                // Connection timeout
-  log?: (...args: any[]) => void  // Custom logger
+function IframeContainer() {
+  const bridge = useBridge()
+  const [iframeKey, setIframeKey] = useState(0)
+  const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
+
+  // Connect when iframe loads
+  useEffect(() => {
+    if (!iframeElement?.contentWindow) return
+
+    bridge.connect(iframeElement.contentWindow)
+
+    return () => bridge.disconnect()
+  }, [bridge, iframeElement?.contentWindow])
+
+  const refreshIframe = () => {
+    setIframeKey(prev => prev + 1) // Force iframe remount
+    setIframeElement(null)         // Clear stale reference
+  }
+
+  return (
+    <div>
+      <button onClick={refreshIframe}>🔄 Refresh Iframe</button>
+      <iframe
+        key={iframeKey}
+        ref={setIframeElement}
+        src="http://localhost:5174"
+      />
+    </div>
+  )
+}
+```
+
+### Error Handling
+
+```tsx
+function ComponentWithErrorHandling() {
+  const remoteProxy = useRemoteProxy()
+
+  const callMethod = async () => {
+    if (remoteProxy.state !== 'hasData') {
+      console.log('Not connected yet')
+      return
+    }
+
+    try {
+      const result = await remoteProxy.data.riskyMethod()
+      console.log('Success:', result)
+    } catch (error) {
+      console.error('Method call failed:', error)
+    }
+  }
+
+  return <button onClick={callMethod}>Call Method</button>
 }
 ```
 
@@ -300,10 +448,5 @@ This protocol is battle-tested and handles all edge cases including:
 - Timing issues where one side isn't ready
 - Network reliability confirmation
 
-## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.

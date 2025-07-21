@@ -4,38 +4,19 @@ A monorepo workspace containing React TypeScript component libraries for Jotai i
 
 ## Packages
 
-- `jotai-iframe-bridge` - A React TypeScript component library with a simple Hello World component
-  - ✅ TypeScript with React components
-  - ✅ Biome formatting and linting
-  - ✅ tsup build system with proper conditional exports
-  - 🚧 Vitest browser mode testing (ESM compatibility in progress)
+- `jotai-iframe-bridge` - A robust iframe communication bridge with type-safe API and reactive state management using Jotai
+  - ✅ Type-safe bidirectional communication between parent and child iframes
+  - ✅ Three-way handshake protocol for reliable connection establishment
+  - ✅ React hooks for seamless integration
+  - ✅ Automatic reconnection support and clean lifecycle management
+  - ✅ Promise-based method calls with full TypeScript support
 
-## Structure
 
-```
-jotai-iframe-bridge-workspace/
-├── packages/
-│   └── jotai-iframe-bridge/          # React component library
-│       ├── src/
-│       │   └── index.tsx             # Hello World component
-│       ├── dist/                     # Built outputs
-│       ├── package.json              # Package configuration
-│       ├── tsconfig.json             # TypeScript config
-│       ├── tsup.config.ts            # Build configuration
-│       └── README.md                 # Package documentation
-├── package.json                      # Workspace root configuration
-├── pnpm-workspace.yaml               # Workspace definition
-├── tsconfig.json                     # Shared TypeScript config
-└── README.md                         # This file
-```
 
-## Features
+For detailed documentation on the jotai-iframe-bridge library, see the [package README](packages/jotai-iframe-bridge/README.md).
 
-- 🏗️ Monorepo structure with pnpm workspaces
-- 🚀 React components built with TypeScript
-- 📦 Lightweight and modern
-- 🛡️ Type-safe interface
-- 🔧 Shared configurations
+
+
 
 ## Installation
 
@@ -60,57 +41,33 @@ The configuration is stored in `.vscode/settings.json` and applies to all JavaSc
 ### Workspace Commands (run from root)
 
 ```bash
-# Build all packages
-pnpm build
+# Interactive script runner
+pnpm scripts
 
-# Watch all packages for changes
-pnpm dev
+# Development runners
+pnpm dev              # Start development mode for all packages
+pnpm dev:servers      # Start only development servers
+pnpm dev:tests        # Start only test runners
 
-# Type check all packages
-pnpm type-check
+# Build and type checking
+pnpm build            # Build all packages
+pnpm type-check       # Type check all packages
 
-# Test all packages
-pnpm test
+# Testing
+pnpm test             # Run tests in watch mode
+pnpm test:run         # Run tests once (CI mode)
+pnpm test:watch       # Watch tests
 
-# Run tests once (CI mode)
-pnpm test:run
+# Code quality
+pnpm format           # Check code formatting
+pnpm format:fix       # Format and fix code
+pnpm lint             # Check linting
+pnpm lint:fix         # Lint and fix code
+pnpm check            # Run both format and lint checks
+pnpm check:fix        # Run both format and lint with fixes
 
-# Watch tests
-pnpm test:watch
-
-# Format code
-pnpm format
-
-# Format and fix code
-pnpm format:fix
-
-# Lint code
-pnpm lint
-
-# Lint and fix code
-pnpm lint:fix
-
-# Run both format and lint checks
-pnpm check
-
-# Run both format and lint with fixes
-pnpm check:fix
-
-# Clean all build outputs
-pnpm clean
-```
-
-### Package-specific Commands
-
-```bash
-# Work on a specific package
-cd packages/jotai-iframe-bridge
-
-# Build this package only
-pnpm build
-
-# Watch this package for changes
-pnpm dev
+# Utilities
+pnpm clean            # Clean all build outputs
 ```
 
 ## License
