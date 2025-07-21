@@ -19,6 +19,7 @@ export interface Bridge<
   isConnected(): boolean
   getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> | null
   getRemoteProxyAtom(): Atom<LazyLoadable<RemoteProxy<TRemoteMethods>>>
-  reset(): void
+  refresh(): void
+  disconnect(): void
   destroy(): void
 }

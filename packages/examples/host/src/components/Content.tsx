@@ -67,7 +67,13 @@ function ConnectionStatus({ state, className = '' }: ConnectionStatusProps) {
 }
 
 // Connection Section Helper Component (uses hooks directly)
-function ConnectionSection({ onRefresh }: { onRefresh: () => void }) {
+function ConnectionSection({
+  onRefresh,
+  onRefreshIframe,
+}: {
+  onRefresh: () => void
+  onRefreshIframe: () => void
+}) {
   const remoteProxyLoadable = useRemoteProxy()
 
   return (
@@ -88,6 +94,13 @@ function ConnectionSection({ onRefresh }: { onRefresh: () => void }) {
             className="px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-violet-500/25"
           >
             🔄 Refresh
+          </button>
+          <button
+            type="button"
+            onClick={onRefreshIframe}
+            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all duration-200 shadow-lg hover:shadow-blue-500/25 ml-2"
+          >
+            🔄 Refresh Iframe
           </button>
         </div>
       </div>
@@ -174,7 +187,6 @@ const IframeContainer = memo(
     setIframeElement: (element: HTMLIFrameElement | null) => void
   }) => {
     const bridge = useBridge()
-    // @ts-ignore
 
     // Handle iframe initialization when element becomes available and loaded
     useEffect(() => {
@@ -183,10 +195,11 @@ const IframeContainer = memo(
       }
 
       const contentWindow = iframeElement.contentWindow
+
       bridge.connect(contentWindow)
 
       return () => {
-        bridge.reset()
+        bridge.disconnect()
       }
     }, [bridge, iframeElement?.contentWindow])
 
@@ -229,13 +242,22 @@ export function AppContent() {
   const [numberA, setNumberA] = useState<number>(0)
   const [numberB, setNumberB] = useState<number>(0)
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
+  const [iframeKey, setIframeKey] = useState<number>(0)
 
   const remoteProxyLoadable = useRemoteProxy()
 
   // Refresh UI state without disconnecting bridge
   const refreshUI = useCallback(() => {
-    bridge.reset()
+    bridge.refresh()
   }, [bridge])
+
+  // Refresh iframe by incrementing key to force remount
+  const refreshIframe = useCallback(() => {
+    // Just increment key - the key change will unmount/remount IframeContainer
+    setIframeKey((prev) => prev + 1)
+    // Clear iframe element ref since it will be stale
+    setIframeElement(null)
+  }, [])
 
   const testSubtraction = async () => {
     if (remoteProxyLoadable.state !== 'hasData') return
@@ -253,7 +275,7 @@ export function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       <div className="max-w-4xl mx-auto">
-        <ConnectionSection onRefresh={refreshUI} />
+        <ConnectionSection onRefresh={refreshUI} onRefreshIframe={refreshIframe} />
 
         <div className="space-y-4">
           {/* Controls */}
@@ -267,7 +289,11 @@ export function AppContent() {
           />
 
           {/* Iframe */}
-          <IframeContainer iframeElement={iframeElement} setIframeElement={setIframeElement} />
+          <IframeContainer
+            key={iframeKey}
+            iframeElement={iframeElement}
+            setIframeElement={setIframeElement}
+          />
         </div>
       </div>
     </div>

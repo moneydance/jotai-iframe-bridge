@@ -144,9 +144,9 @@ export function AppContent() {
   const remoteProxyLoadable = useRemoteProxy()
 
   // Refresh UI state without disconnecting bridge
-  const handleRefresh = useCallback(() => {
-    bridge.reset()
-  }, [bridge.reset])
+  const refreshUI = useCallback(() => {
+    bridge.refresh()
+  }, [bridge])
 
   // Auto-connect when bridge is created
   useEffect(() => {
@@ -160,8 +160,10 @@ export function AppContent() {
         // Connection failed silently
       }
     }
-
     connectBridge()
+    return () => {
+      bridge.disconnect()
+    }
   }, [bridge])
 
   const testAddition = useCallback(async () => {
@@ -180,7 +182,7 @@ export function AppContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
       <div className="max-w-4xl mx-auto">
-        <ConnectionSection onRefresh={handleRefresh} />
+        <ConnectionSection onRefresh={refreshUI} />
 
         <CalculationSection
           numberA={numberA}

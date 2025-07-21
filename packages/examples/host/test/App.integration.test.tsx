@@ -56,7 +56,7 @@ describe('AppContent - Real UI Testing', () => {
   })
 
   afterEach(() => {
-    testBridge.reset()
+    testBridge.refresh()
   })
 
   test('renders initial UI correctly', () => {

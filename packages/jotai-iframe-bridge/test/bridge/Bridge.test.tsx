@@ -90,7 +90,7 @@ describe('Bridge Reset Flow', () => {
     const initialProxyPromise = bridge.getRemoteProxyPromise()
 
     // Reset - this should destroy current session and create a new one
-    bridge.reset()
+    bridge.refresh()
 
     // Wait for new proxy promise (different from initial)
     await waitFor(() => {
@@ -116,7 +116,7 @@ describe('Bridge Reset Flow', () => {
     const initialProxyPromise = bridge.getRemoteProxyPromise()
 
     // Reset
-    bridge.reset()
+    bridge.refresh()
 
     // Should have different proxy promise after reset
     await waitFor(() => {
@@ -143,7 +143,7 @@ describe('Bridge Proxy State Management', () => {
     const oldProxyPromise = bridge.getRemoteProxyPromise()
 
     // Reset bridge - this auto-reconnects
-    bridge.reset()
+    bridge.refresh()
 
     // Should have different promise objects
     await waitFor(() => {
@@ -216,7 +216,7 @@ describe('Bridge Reactivity', () => {
       expect(proxyLoadableAfterConnect.state).toBe('loading') // Should be loading state
 
       // Test reset functionality
-      bridge.reset()
+      bridge.refresh()
 
       // Should get new proxy promise after reset
       await waitFor(() => {
@@ -256,7 +256,7 @@ describe('Bridge Reactivity', () => {
 
       if (i < 2) {
         // Don't reset on the last iteration
-        bridge.reset()
+        bridge.refresh()
 
         // Should get different proxy promise after reset
         await waitFor(() => {

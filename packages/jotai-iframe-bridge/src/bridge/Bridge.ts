@@ -30,7 +30,6 @@ export function createBridge<
 ): Bridge<TLocalMethods, TRemoteMethods> {
   const bridgeId = generateId()
   config.log?.(`🌉 Bridge: Creating Bridge with ID: ${bridgeId}`)
-
   // Atoms - single source of truth
   const sessionAtom = atom<ConnectionSession<TLocalMethods, TRemoteMethods> | null>(null)
   const targetWindowAtom = atom<Window | null>(null)
@@ -153,10 +152,23 @@ export function createBridge<
       return remoteProxyAtom
     },
 
-    reset(): void {
+    refresh(): void {
       config.log?.(`🧹 Resetting Bridge`)
 
       // Actually destroy the session to send DESTROY message to remote
+      const currentSession = store.get(sessionAtom)
+      if (currentSession) {
+        currentSession.destroy() // This sends DESTROY to remote AND emits sessionDestroyed
+      }
+    },
+
+    disconnect(): void {
+      config.log?.(`🔌 Disconnecting Bridge`)
+
+      // Clear target window first to prevent auto-reconnection
+      store.set(targetWindowAtom, null)
+
+      // Then destroy the session to send DESTROY message to remote
       const currentSession = store.get(sessionAtom)
       if (currentSession) {
         currentSession.destroy() // This sends DESTROY to remote AND emits sessionDestroyed
@@ -168,7 +180,6 @@ export function createBridge<
       const currentSession = store.get(sessionAtom)
       const targetWindow = store.get(targetWindowAtom)
 
-      store.set(sessionAtom, null)
       store.set(targetWindowAtom, null)
 
       // Unregister from BridgeRegistry with target window for efficient cleanup
