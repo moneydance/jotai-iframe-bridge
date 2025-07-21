@@ -174,4 +174,59 @@ describe('AppContent - Real UI Testing', () => {
       timeout: 15000,
     }
   )
+
+  test(
+    'iframe refresh button resets iframe and calculations still work',
+    async () => {
+      const user = userEvent.setup()
+      renderApp(<AppContent />, { bridge: testBridge, store: testStore })
+      await waitForIframeConnection(testBridge)
+
+      // Test initial calculation works
+      const inputA = screen.getByTestId('number-a-input')
+      const inputB = screen.getByTestId('number-b-input')
+      const calculateButton = screen.getByTestId('calculate-subtract-button')
+
+      await user.clear(inputA)
+      await user.type(inputA, '25')
+      await user.clear(inputB)
+      await user.type(inputB, '10')
+      await user.click(calculateButton)
+
+      // Wait for initial result to appear
+      await waitFor(() => {
+        const result = screen.getByTestId('calculation-result')
+        expect(result).toHaveTextContent('15')
+      })
+
+      // Click iframe refresh button (not the regular refresh button)
+      const iframeRefreshButton = screen.getByText('🔄 Refresh Iframe')
+      await user.click(iframeRefreshButton)
+
+      // Wait for reconnection - iframe refresh should trigger disconnect/reconnect
+      await waitForIframeConnection(testBridge)
+
+      // Verify calculations still work after iframe refresh
+      // Re-query elements after iframe refresh (they were removed/re-added during refresh)
+      await user.clear(screen.getByTestId('number-a-input'))
+      await user.type(screen.getByTestId('number-a-input'), '100')
+      await user.clear(screen.getByTestId('number-b-input'))
+      await user.type(screen.getByTestId('number-b-input'), '30')
+
+      // Try to calculate - this will test if the bridge properly reconnected after iframe refresh
+      await user.click(screen.getByTestId('calculate-subtract-button'))
+
+      // Wait for result - with longer timeout since iframe refresh might be slow
+      await waitFor(
+        () => {
+          const result = screen.getByTestId('calculation-result')
+          expect(result).toHaveTextContent('70')
+        },
+        { timeout: 12000 }
+      )
+    },
+    {
+      timeout: 20000,
+    }
+  )
 })
