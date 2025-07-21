@@ -1,18 +1,18 @@
 import type { Atom } from 'jotai'
 import { atom, getDefaultStore } from 'jotai'
-import { connectionRegistry } from '../connection/ConnectionRegistry'
 import type { ConnectionConfig } from '../connection/ConnectionSession'
 import { ConnectionSession } from '../connection/ConnectionSession'
 import type { Methods, RemoteProxy } from '../connection/types'
 import { generateId } from '../utils'
 import type { LazyLoadable } from '../utils/lazyLoadable'
 import { lazyLoadable } from '../utils/lazyLoadable'
+import { BridgeLifecycle } from './BridgeLifecycle'
 import type { Bridge } from './types'
 
 // Store type from Jotai
 type Store = ReturnType<typeof getDefaultStore>
 
-// ==================== Main Bridge Creation ====================
+// ==================== Bridge Implementation ====================
 
 export function createBridge<
   TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
@@ -31,35 +31,12 @@ export function createBridge<
 
   config.log?.(`🌉 Bridge: Creating Bridge with ID: ${bridgeId}`)
 
+  // Event system for immediate state management
+  const lifecycle = new BridgeLifecycle()
+
+  // ATOMS as single source of truth
   const targetWindowAtom = atom<Window | null>(null)
-
-  const sessionAtom = atom((get) => {
-    const targetWindow = get(targetWindowAtom)
-    config.log?.(`🔍 sessionAtom re-evaluated: targetWindow=${!!targetWindow}`)
-
-    if (!targetWindow) return null
-
-    const windowSessionAtom = connectionRegistry.get<TLocalMethods, TRemoteMethods>(targetWindow)
-    let session = get(windowSessionAtom)
-
-    if (!session) {
-      session = connectionRegistry.getOrCreateSession(targetWindow, () => {
-        const participantId = generateId()
-        config.log?.(`📝 Auto-creating session with participant: ${participantId}`)
-        return new ConnectionSession<TLocalMethods, TRemoteMethods>(
-          targetWindow,
-          config,
-          participantId,
-          connectionRegistry
-        )
-      })
-      config.log?.(`📝 Session resolved`)
-    }
-    config.log?.(
-      `🔍 sessionAtom re-evaluated: session=${!!session}, destroyed=${session?.isDestroyed()}`
-    )
-    return session
-  })
+  const sessionAtom = atom<ConnectionSession<TLocalMethods, TRemoteMethods> | null>(null)
 
   const remoteProxyPromiseAtom = atom((get) => {
     const session = get(sessionAtom)
@@ -70,6 +47,7 @@ export function createBridge<
     return proxyPromise
   })
 
+  // Use LazyLoadable properly with event-driven cache invalidation
   const remoteProxyAtom = lazyLoadable(remoteProxyPromiseAtom)
 
   const isConnectedAtom = atom((get) => {
@@ -81,21 +59,70 @@ export function createBridge<
     return isConnected
   })
 
+  // Event handlers for immediate atom updates
+  lifecycle.on('sessionCreated', (session: ConnectionSession<TLocalMethods, TRemoteMethods>) => {
+    config.log?.(`✅ Session created, updating atoms`)
+    store.set(sessionAtom, session as ConnectionSession<TLocalMethods, TRemoteMethods>)
+  })
+
+  lifecycle.on(
+    'sessionDestroyed',
+    (destroyedSession: ConnectionSession<TLocalMethods, TRemoteMethods>) => {
+      config.log?.(`🧹 Session destroyed, checking if current session`)
+      // Only clear bridge state if this was the current active session
+      const currentSession = store.get(sessionAtom)
+      if (currentSession === destroyedSession) {
+        config.log?.(`✅ Clearing atoms for current session`)
+        store.set(sessionAtom, null)
+        const targetWindow = store.get(targetWindowAtom)
+        if (targetWindow) {
+          config.log?.(`🔄 Reconnecting to existing target window after reset`)
+          bridge.connect(targetWindow)
+        }
+      } else {
+        config.log?.(`⏭️ Ignoring destroy for old session, keeping current session active`)
+      }
+    }
+  )
+
+  lifecycle.on('targetWindowChanged', (window: Window | null) => {
+    config.log?.(`🎯 Target window updated: ${!!window}`)
+    store.set(targetWindowAtom, window)
+  })
+
+  // Bridge implementation
   const bridge: Bridge<TLocalMethods, TRemoteMethods> = {
     id: bridgeId,
+
     connect(window?: Window): void {
       const win = window || (self.parent !== self ? self.parent : undefined)
       if (!win) {
         throw new Error('No target window provided and not in iframe context')
       }
       config.log?.(`🚀 Connecting to target window`)
-      store.set(targetWindowAtom, win)
+      lifecycle.emit('targetWindowChanged', win)
+      // Destroy existing session if any
+      const currentSession = store.get(sessionAtom)
+      if (currentSession) {
+        config.log?.(`🧹 Destroying existing session before creating new one`)
+        currentSession.destroy()
+      }
+      // Create new session directly
+      const participantId = generateId()
+      config.log?.(`📝 Creating new session with participant: ${participantId}`)
+      const newSession = new ConnectionSession<TLocalMethods, TRemoteMethods>(
+        win,
+        config,
+        participantId,
+        lifecycle
+      )
+      // Emit session creation event - this will update atoms
+      lifecycle.emit('sessionCreated', newSession)
       config.log?.(`✅ Connected to target window`)
     },
 
     isConnected(): boolean {
-      const connected = store.get(isConnectedAtom)
-      return connected
+      return store.get(isConnectedAtom)
     },
 
     getRemoteProxyPromise(): Promise<RemoteProxy<TRemoteMethods>> | null {
@@ -108,8 +135,24 @@ export function createBridge<
 
     reset(): void {
       config.log?.(`🧹 Resetting Bridge`)
+
+      // Actually destroy the session to send DESTROY message to remote
       const currentSession = store.get(sessionAtom)
-      currentSession?.destroy()
+      if (currentSession) {
+        currentSession.destroy() // This sends DESTROY to remote AND emits sessionDestroyed
+      }
+    },
+
+    destroy(): void {
+      config.log?.(`💥 Destroying Bridge`)
+      const currentSession = store.get(sessionAtom)
+      store.set(sessionAtom, null)
+      store.set(targetWindowAtom, null)
+      if (currentSession) {
+        currentSession.destroy()
+      }
+      lifecycle.destroy()
+      config.log?.(`✅ Bridge destroyed`)
     },
   }
 

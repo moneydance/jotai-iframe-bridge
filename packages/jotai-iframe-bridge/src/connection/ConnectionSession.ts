@@ -1,6 +1,6 @@
 import type { WritableAtom } from 'jotai'
 import { atom, getDefaultStore } from 'jotai'
-import type { ConnectionRegistry } from './ConnectionRegistry'
+import type { BridgeLifecycle } from '../bridge/BridgeLifecycle'
 import { createUniversalMessageHandler, type HandlerConfig } from './handlers'
 import { Messages } from './Messages'
 import { WindowMessenger } from './messaging'
@@ -25,9 +25,8 @@ export class ConnectionSession<
 > {
   private config: ConnectionConfig<TLocalMethods>
   private participantId: string
-  private targetWindow: Window
-  private registry: ConnectionRegistry
-  private lifecycle: SessionLifecycle
+  public lifecycle: SessionLifecycle // Make public for bridge access
+  private bridgeLifecycle: BridgeLifecycle // For notifying bridge of events
   private pairedParticipantAtom: WritableAtom<string | null, [string | null], void>
   private handshakeCompletedAtom: WritableAtom<boolean, [boolean], void>
   private store: Store
@@ -37,18 +36,17 @@ export class ConnectionSession<
   private proxyPromiseResolve!: (proxy: RemoteProxy<TRemoteMethods>) => void
   private proxyPromiseReject!: (error: Error) => void
   private timeoutId: NodeJS.Timeout | null = null
-  private destroyed = false // Track if session has been destroyed
+  private destroyed = false
 
   constructor(
     targetWindow: Window,
     config: ConnectionConfig<TLocalMethods>,
     participantId: string,
-    registry: ConnectionRegistry
+    bridgeLifecycle: BridgeLifecycle
   ) {
     this.config = config
     this.participantId = participantId
-    this.targetWindow = targetWindow
-    this.registry = registry
+    this.bridgeLifecycle = bridgeLifecycle
     this.store = getDefaultStore()
     this.config.log?.(`🔗 Creating ConnectionSession with participant: ${this.participantId}`)
 
@@ -109,14 +107,10 @@ export class ConnectionSession<
       this.proxyPromiseReject(error)
     })
 
-    // Destroy received - reset connection state
+    // Destroy received - reset connection state and notify bridge
     this.lifecycle.on('destroyReceived', (fromParticipantId: string) => {
-      this.config.log?.(`🔄 ConnectionSession received DESTROY from: ${fromParticipantId}`)
-      // Explicitly clear pairing state before destroying
-      this.store.set(this.pairedParticipantAtom, null)
-      this.store.set(this.handshakeCompletedAtom, false)
-      this.config.log?.(`🧹 Cleared pairing state for session: ${this.participantId}`)
-      this.destroy()
+      this.config.log?.(`🔄 Session lifecycle: destroyReceived from: ${fromParticipantId}`)
+      this.destroy() // Let destroy() handle all cleanup and lifecycle events
     })
 
     // Paired with participant - update state
@@ -239,17 +233,14 @@ export class ConnectionSession<
       this.config.log?.(`⏭️ Skipping destroy for already destroyed session: ${this.participantId}`)
       return // Already destroyed
     }
-
-    this.config.log?.(`🔥 Starting destroy for session: ${this.participantId}`)
-    this.destroyed = true
-
-    // Remove self from registry FIRST to prevent automatic recreation during cleanup
-    this.config.log?.(`🗑️ Removing session ${this.participantId} from registry`)
-    this.registry.delete(this.targetWindow)
-
-    this.sendDestroyMessage()
     this.config.log?.(`🧹 Destroying ConnectionSession for participant: ${this.participantId}`)
+    this.sendDestroyMessage()
+    this.store.set(this.pairedParticipantAtom, null)
+    this.store.set(this.handshakeCompletedAtom, false)
+    this.destroyed = true
     this.messenger.destroy()
+    this.config.log?.(`🔄 Session lifecycle: destroyReceived from: ${this.participantId}`)
+    this.bridgeLifecycle.emit('sessionDestroyed', this)
     this.config.log?.(`✅ ConnectionSession destroyed for participant: ${this.participantId}`)
   }
 }

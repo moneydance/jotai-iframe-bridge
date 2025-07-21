@@ -21,13 +21,9 @@ async function isRemoteAppRunning(): Promise<boolean> {
 }
 
 // Helper function to wait for UI to show connected state and verify functionality
-async function waitForIframeConnection(
-  bridge: Bridge<ParentMethods, ChildMethods>,
-  oldProxyPromise?: Promise<any>
-) {
+async function waitForIframeConnection(bridge: Bridge<ParentMethods, ChildMethods>) {
   try {
     console.log(`⏳ Waiting for bridge ${bridge.id} UI to show connected...`)
-
     // Wait for the host UI to reflect the connected state
     await waitFor(
       () => {
@@ -35,30 +31,8 @@ async function waitForIframeConnection(
       },
       { timeout: 5000 }
     )
-    console.log(`✅ Bridge ${bridge.id} host UI shows connected!`)
-
-    // If this is after a reset, give extra time for both sides to reconnect
-    if (oldProxyPromise) {
-      console.log(`⏳ Allowing extra time for reconnection after reset...`)
-      await new Promise((resolve) => setTimeout(resolve, 500))
-    }
-
-    // Verify the bridge is actually functional by testing a remote method call
-    console.log(`⏳ Verifying bridge ${bridge.id} is functional...`)
-    const remoteProxy = await bridge.getRemoteProxyPromise()
-    if (!remoteProxy) {
-      throw new Error('Remote proxy is null')
-    }
-
-    // Test that we can actually call a method (this proves iframe is connected)
-    const testResult = await remoteProxy.subtract(5, 2)
-    if (testResult !== 3) {
-      throw new Error(`Remote method call failed, expected 3 but got ${testResult}`)
-    }
-
-    console.log(`✅ Bridge ${bridge.id} is fully functional!`)
   } catch (error) {
-    console.error(`❌ Bridge ${bridge.id} connection failed:`, error)
+    console.error(`❌ Error waiting for bridge ${bridge.id} UI to show connected:`, error)
     throw error
   }
 }
@@ -174,21 +148,22 @@ describe('AppContent - Real UI Testing', () => {
       const refreshButton = screen.getByText('🔄 Refresh')
       await user.click(refreshButton)
 
-      // Wait for reconnection - even if it takes time in test environment
-      await new Promise((resolve) => setTimeout(resolve, 2000))
+      // Wait for reconnection - inputs will disappear then reappear
+      await waitForIframeConnection(testBridge)
 
+      // Re-query elements after reconnection (they were removed/re-added during reset)
       // Verify calculations still work after refresh by trying a new calculation
-      await user.clear(inputA)
-      await user.type(inputA, '20')
-      await user.clear(inputB)
-      await user.type(inputB, '8')
+      await user.clear(screen.getByTestId('number-a-input'))
+      await user.type(screen.getByTestId('number-a-input'), '20')
+      await user.clear(screen.getByTestId('number-b-input'))
+      await user.type(screen.getByTestId('number-b-input'), '8')
 
       // Try to calculate - this will test if the bridge actually reconnected
+      await user.click(screen.getByTestId('calculate-subtract-button'))
 
       // Wait for result - with longer timeout since reconnection might be slow in tests
       await waitFor(
-        async () => {
-          await user.click(calculateButton)
+        () => {
           const result = screen.getByTestId('calculation-result')
           expect(result).toHaveTextContent('12')
         },
