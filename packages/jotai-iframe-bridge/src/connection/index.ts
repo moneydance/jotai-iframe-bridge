@@ -1,4 +1,3 @@
-export { ConnectionRegistry, connectionRegistry } from './ConnectionRegistry'
 export { ConnectionSession } from './ConnectionSession'
 export { Messages } from './Messages'
 export * from './messaging'

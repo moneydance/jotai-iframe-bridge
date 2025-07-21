@@ -1,9 +1,7 @@
 import { waitFor } from '@testing-library/react'
-import { type Atom, getDefaultStore } from 'jotai'
+import { getDefaultStore } from 'jotai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createBridge } from '../../src/bridge/Bridge'
-import { connectionRegistry } from '../../src/connection/ConnectionRegistry'
-import type { ConnectionSession } from '../../src/connection/ConnectionSession'
 
 // Mock window for testing
 function createMockWindow(): Window {
@@ -39,58 +37,44 @@ describe('Bridge Connection Flow', () => {
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const mockTargetWindow = createMockWindow()
 
-    // Initial state
-    expect(bridge.isConnected()).toBe(false)
+    // Initial state - no proxy promise available
     expect(bridge.getRemoteProxyPromise()).toBeNull()
 
     // Connect
     bridge.connect(mockTargetWindow)
 
-    // Wait for session to be created and atoms to update
+    // Wait for proxy promise to be available
     await waitFor(() => {
       expect(bridge.getRemoteProxyPromise()).not.toBeNull()
     })
 
-    // Should have proxy promise after connection
     const proxyPromise = bridge.getRemoteProxyPromise()
     expect(proxyPromise).not.toBeNull()
-
-    // Should have session in registry (check via registry directly)
-    const registrySessionAtom = connectionRegistry.get(mockTargetWindow)
-    const registrySession = store.get(registrySessionAtom)
-    expect(registrySession).not.toBeNull()
-    expect(registrySession?.getParticipantId()).toBeDefined()
-
-    // Proxy promise should be from the registry session
-    expect(proxyPromise).toBe(registrySession?.getProxyPromise())
   })
 
-  it('should maintain consistent participant IDs across bridge methods', async () => {
+  it('should maintain consistent proxy state across multiple calls', async () => {
     const store = getDefaultStore()
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const mockTargetWindow = createMockWindow()
 
     bridge.connect(mockTargetWindow)
 
-    // Wait for session creation
+    // Wait for proxy promise
     await waitFor(() => {
       expect(bridge.getRemoteProxyPromise()).not.toBeNull()
     })
 
-    const registrySessionAtom = connectionRegistry.get(mockTargetWindow)
-    const registrySession = store.get(registrySessionAtom)
-    const sessionParticipantId = registrySession?.getParticipantId()
+    const proxyPromise1 = bridge.getRemoteProxyPromise()
+    const proxyPromise2 = bridge.getRemoteProxyPromise()
 
-    const proxyPromise = bridge.getRemoteProxyPromise()
-    expect(proxyPromise).toBe(registrySession?.getProxyPromise())
-
-    // All bridge methods should reference the same session/participant
-    expect(sessionParticipantId).toBeDefined()
+    // Multiple calls should return the same promise
+    expect(proxyPromise1).toBe(proxyPromise2)
+    expect(proxyPromise1).not.toBeNull()
   })
 })
 
 describe('Bridge Reset Flow', () => {
-  it('should completely reset bridge state', async () => {
+  it('should reset and auto-reconnect with fresh proxy promise', async () => {
     const store = getDefaultStore()
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const mockTargetWindow = createMockWindow()
@@ -98,35 +82,25 @@ describe('Bridge Reset Flow', () => {
     // Establish initial connection
     bridge.connect(mockTargetWindow)
 
-    // Wait for session creation
+    // Wait for initial proxy promise
     await waitFor(() => {
       expect(bridge.getRemoteProxyPromise()).not.toBeNull()
     })
 
-    const initialSessionAtom = connectionRegistry.get(mockTargetWindow)
-    const initialSession = store.get(initialSessionAtom)
-    const initialParticipantId = initialSession?.getParticipantId()
     const initialProxyPromise = bridge.getRemoteProxyPromise()
 
-    expect(bridge.isConnected()).toBe(false) // loading state
-    expect(initialSession).not.toBeNull()
-    expect(initialParticipantId).toBeDefined()
-    expect(initialProxyPromise).not.toBeNull()
-
-    // Reset
+    // Reset - this should destroy current session and create a new one
     bridge.reset()
 
-    // Should clear session from registry
+    // Wait for new proxy promise (different from initial)
     await waitFor(() => {
-      const postResetSession = store.get(initialSessionAtom)
-      expect(postResetSession).toBeNull()
+      const newProxyPromise = bridge.getRemoteProxyPromise()
+      expect(newProxyPromise).not.toBeNull()
+      expect(newProxyPromise).not.toBe(initialProxyPromise)
     })
-
-    // Bridge should report disconnected
-    expect(bridge.isConnected()).toBe(false)
   })
 
-  it('should create fresh state after reset and reconnect', async () => {
+  it('should create fresh state after reset', async () => {
     const store = getDefaultStore()
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const mockTargetWindow = createMockWindow()
@@ -134,43 +108,22 @@ describe('Bridge Reset Flow', () => {
     // Initial connection
     bridge.connect(mockTargetWindow)
 
-    // Wait for initial session creation
+    // Wait for initial proxy promise
     await waitFor(() => {
       expect(bridge.getRemoteProxyPromise()).not.toBeNull()
     })
 
-    const initialSessionAtom = connectionRegistry.get(mockTargetWindow)
-    const initialSession = store.get(initialSessionAtom)
-    const initialParticipantId = initialSession?.getParticipantId()
     const initialProxyPromise = bridge.getRemoteProxyPromise()
 
     // Reset
     bridge.reset()
 
-    // Wait for session to be cleared
+    // Should have different proxy promise after reset
     await waitFor(() => {
-      expect(store.get(initialSessionAtom)).toBeNull()
+      const newProxyPromise = bridge.getRemoteProxyPromise()
+      expect(newProxyPromise).not.toBeNull()
+      expect(newProxyPromise).not.toBe(initialProxyPromise)
     })
-
-    // Reconnect
-    bridge.connect(mockTargetWindow)
-
-    // Wait for new session creation
-    await waitFor(() => {
-      expect(bridge.getRemoteProxyPromise()).not.toBeNull()
-    })
-
-    // Should have new session with different participant ID
-    const newSessionAtom = connectionRegistry.get(mockTargetWindow)
-    const newSession = store.get(newSessionAtom)
-    const newParticipantId = newSession?.getParticipantId()
-    const newProxyPromise = bridge.getRemoteProxyPromise()
-
-    expect(newSession).not.toBeNull()
-    expect(newParticipantId).toBeDefined()
-    expect(newParticipantId).not.toBe(initialParticipantId)
-    expect(newProxyPromise).not.toBeNull()
-    expect(newProxyPromise).not.toBe(initialProxyPromise)
   })
 })
 
@@ -182,53 +135,49 @@ describe('Bridge Proxy State Management', () => {
 
     // Initial connection and get proxy
     bridge.connect(mockTargetWindow)
-    const oldProxyPromise = bridge.getRemoteProxyPromise()
-    expect(oldProxyPromise).not.toBeNull()
 
-    // Reset bridge
-    bridge.reset()
-
-    // Wait for reset to complete
-    const sessionAtom = connectionRegistry.get(mockTargetWindow)
     await waitFor(() => {
-      expect(store.get(sessionAtom)).toBeNull()
+      expect(bridge.getRemoteProxyPromise()).not.toBeNull()
     })
 
-    // Reconnect
-    bridge.connect(mockTargetWindow)
-    const newProxyPromise = bridge.getRemoteProxyPromise()
+    const oldProxyPromise = bridge.getRemoteProxyPromise()
 
-    // Should be different promise objects
-    expect(newProxyPromise).not.toBeNull()
-    expect(newProxyPromise).not.toBe(oldProxyPromise)
+    // Reset bridge - this auto-reconnects
+    bridge.reset()
+
+    // Should have different promise objects
+    await waitFor(() => {
+      const newProxyPromise = bridge.getRemoteProxyPromise()
+      expect(newProxyPromise).not.toBeNull()
+      expect(newProxyPromise).not.toBe(oldProxyPromise)
+    })
   })
 
-  it('should handle old proxy references after reset', async () => {
+  it('should handle connection lifecycle correctly', async () => {
     const store = getDefaultStore()
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const mockTargetWindow = createMockWindow()
 
-    // Initial connection and store proxy reference
+    // Initial state
+    expect(bridge.getRemoteProxyPromise()).toBeNull()
+
+    // Initial connection
     bridge.connect(mockTargetWindow)
-    const oldProxyPromise = bridge.getRemoteProxyPromise()
-    expect(oldProxyPromise).not.toBeNull()
 
-    // Reset bridge (this should destroy the underlying session/messenger)
-    bridge.reset()
-
-    // Wait for session to be destroyed
-    const sessionAtom = connectionRegistry.get(mockTargetWindow)
     await waitFor(() => {
-      expect(store.get(sessionAtom)).toBeNull()
+      expect(bridge.getRemoteProxyPromise()).not.toBeNull()
     })
 
-    // The old proxy promise should still exist but any proxy derived from it
-    // should fail when called (since the underlying messenger is destroyed)
-    expect(oldProxyPromise).not.toBeNull()
+    const firstProxyPromise = bridge.getRemoteProxyPromise()
 
-    // Note: We can't easily test proxy method calls here since we'd need
-    // to mock the full connection handshake, but this verifies the
-    // promise object lifecycle
+    // Connect again to same window - should get new session
+    bridge.connect(mockTargetWindow)
+
+    await waitFor(() => {
+      const secondProxyPromise = bridge.getRemoteProxyPromise()
+      expect(secondProxyPromise).not.toBeNull()
+      expect(secondProxyPromise).not.toBe(firstProxyPromise)
+    })
   })
 })
 
@@ -237,7 +186,7 @@ describe('Bridge Reactivity', () => {
     vi.clearAllMocks()
   })
 
-  it('should have reactive remoteProxyAtom that responds to session changes', () => {
+  it('should have reactive remoteProxyAtom that responds to session changes', async () => {
     const store = getDefaultStore()
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const remoteProxyAtom = bridge.getRemoteProxyAtom()
@@ -256,17 +205,17 @@ describe('Bridge Reactivity', () => {
       expect(bridge.getRemoteProxyPromise()).toBeNull()
       const initialLoadable = store.get(remoteProxyAtom)
       expect(initialLoadable.state).toBe('uninitialized')
-      expect(bridge.isConnected()).toBe(false)
 
       // Connect to target window
       const mockTargetWindow = createMockWindow()
       bridge.connect(mockTargetWindow)
 
-      const proxyPromiseAfterConnect = bridge.getRemoteProxyPromise()
-      const proxyLoadableAfterConnect = store.get(remoteProxyAtom)
+      // Wait for proxy promise to be available
+      await waitFor(() => {
+        expect(bridge.getRemoteProxyPromise()).not.toBeNull()
+      })
 
-      // Should have proxy promise and loading state
-      expect(proxyPromiseAfterConnect).not.toBeNull()
+      const proxyLoadableAfterConnect = store.get(remoteProxyAtom)
 
       // CRITICAL TEST: remoteProxyAtom should have re-evaluated after session creation
       expect(remoteProxyAtomEvaluationCount).toBeGreaterThan(0)
@@ -275,12 +224,11 @@ describe('Bridge Reactivity', () => {
       // Test reset functionality
       bridge.reset()
 
-      // After reset with session preservation, connection state is reset but session may be preserved
-      // The proxy promise and state may remain due to session reuse capabilities
-      expect(bridge.isConnected()).toBe(false) // Bridge should report disconnected
-
-      // Note: proxy promise and loadable state may persist due to session preservation
-      // This is the intended behavior for resilient reconnection
+      // Should get new proxy promise after reset
+      await waitFor(() => {
+        const newProxyPromise = bridge.getRemoteProxyPromise()
+        expect(newProxyPromise).not.toBeNull()
+      })
     } finally {
       // Cleanup subscriptions
       proxyUnsubscribe()
@@ -293,38 +241,38 @@ describe('Bridge Reactivity', () => {
     const remoteProxyAtom = bridge.getRemoteProxyAtom()
     const mockTargetWindow = createMockWindow()
 
+    const proxyPromises: (Promise<any> | null)[] = []
+
     // Multiple connect/reset cycles
     for (let i = 0; i < 3; i++) {
       console.log(`🔄 Cycle ${i + 1}`)
 
       bridge.connect(mockTargetWindow)
 
-      // Wait for session creation
+      // Wait for proxy promise
       await waitFor(() => {
         expect(bridge.getRemoteProxyPromise()).not.toBeNull()
       })
 
+      const currentProxyPromise = bridge.getRemoteProxyPromise()
+      proxyPromises.push(currentProxyPromise)
+
       const loadableAfterConnect = store.get(remoteProxyAtom)
       expect(loadableAfterConnect.state).toBe('loading')
 
-      const preResetSessionAtom: Atom<ConnectionSession<any, any> | null> =
-        connectionRegistry.get(mockTargetWindow)
-      const preResetSession = store.get(preResetSessionAtom)
-      const preResetSessionId = preResetSession?.getParticipantId()
+      if (i < 2) {
+        // Don't reset on the last iteration
+        bridge.reset()
 
-      bridge.reset()
-
-      // Reset should destroy the session in the registry
-      await waitFor(() => {
-        const postResetSession = store.get(preResetSessionAtom)
-        expect(postResetSession).toBeNull()
-      })
-
-      // Bridge should report disconnected after reset
-      expect(bridge.isConnected()).toBe(false)
-
-      // Verify different session IDs were created
-      expect(preResetSessionId).toBeDefined()
+        // Should get different proxy promise after reset
+        await waitFor(() => {
+          const newProxyPromise = bridge.getRemoteProxyPromise()
+          expect(newProxyPromise).not.toBe(currentProxyPromise)
+        })
+      }
     }
+
+    // All proxy promises should be different
+    expect(new Set(proxyPromises).size).toBe(3)
   })
 })

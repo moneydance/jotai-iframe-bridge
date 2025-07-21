@@ -11,7 +11,7 @@ import type { LazyLoadable } from '../utils/lazyLoadable'
 export type LoadableAtom<T> = ReturnType<typeof loadable<T>>
 
 export interface Bridge<
-  _TLocalMethods extends Record<keyof _TLocalMethods, (...args: any[]) => any> = Methods,
+  TLocalMethods extends Record<keyof TLocalMethods, (...args: any[]) => any> = Methods,
   TRemoteMethods extends Record<keyof TRemoteMethods, (...args: any[]) => any> = Methods,
 > {
   id: string
