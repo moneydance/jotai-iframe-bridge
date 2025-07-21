@@ -1,6 +1,7 @@
 // ==================== Bridge ====================
 export { createBridge } from './bridge/Bridge'
 export { BridgeLifecycle } from './bridge/BridgeLifecycle'
+export { bridgeRegistry } from './bridge/BridgeRegistry'
 export type { BridgeEvents } from './bridge/BridgeLifecycle'
 export type { Bridge, LoadableAtom } from './bridge/types'
 export type { ConnectionConfig } from './connection/ConnectionSession'

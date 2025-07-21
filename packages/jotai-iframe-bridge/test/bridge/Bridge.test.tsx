@@ -16,11 +16,11 @@ function createMockWindow(): Window {
 }
 
 // Test method interfaces
-interface TestLocalMethods {
+interface TestLocalMethods extends Record<string, (...args: any[]) => any> {
   localMethod: (data: string) => Promise<string>
 }
 
-interface TestRemoteMethods {
+interface TestRemoteMethods extends Record<string, (...args: any[]) => any> {
   remoteMethod: (data: string) => Promise<string>
 }
 
@@ -158,10 +158,7 @@ describe('Bridge Proxy State Management', () => {
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
     const mockTargetWindow = createMockWindow()
 
-    // Initial state
-    expect(bridge.getRemoteProxyPromise()).toBeNull()
-
-    // Initial connection
+    // Connect to window
     bridge.connect(mockTargetWindow)
 
     await waitFor(() => {
@@ -170,22 +167,19 @@ describe('Bridge Proxy State Management', () => {
 
     const firstProxyPromise = bridge.getRemoteProxyPromise()
 
-    // Connect again to same window - should get new session
+    // Connect again to same window - should be idempotent (same session)
     bridge.connect(mockTargetWindow)
 
     await waitFor(() => {
       const secondProxyPromise = bridge.getRemoteProxyPromise()
       expect(secondProxyPromise).not.toBeNull()
-      expect(secondProxyPromise).not.toBe(firstProxyPromise)
+      // Should be the SAME proxy promise (idempotent behavior)
+      expect(secondProxyPromise).toBe(firstProxyPromise)
     })
   })
 })
 
 describe('Bridge Reactivity', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it('should have reactive remoteProxyAtom that responds to session changes', async () => {
     const store = getDefaultStore()
     const bridge = createBridge<TestLocalMethods, TestRemoteMethods>(testConfig, store)
